@@ -1,0 +1,13 @@
+{
+  "name": "shapediver-wordpress-plugin",
+  "version": "1.0.0",
+  "description": "This README provides instructions on how to set up and manage your Bitnami WordPress installation using Docker.",
+  "main": "index.js",
+  "scripts": {
+    "stop": "docker-compose down",
+    "dev": "yarn stop && docker-compose up -d",
+    "status": "docker-compose ps"
+  },
+  "author": "",
+  "license": "ISC"
+}

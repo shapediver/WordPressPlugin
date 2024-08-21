@@ -1,0 +1,31 @@
+#configurator-modal {
+  display: none; /* Hidden by default */
+  position: fixed;
+  z-index: 100000; /* Sit on top */
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#configurator-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+#open-configurator {
+  margin-left: 10px;
+}
+
+.open-configurator {
+  margin-top: 5px;
+}
