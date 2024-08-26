@@ -4,8 +4,10 @@
   "description": "This README provides instructions on how to set up and manage your Bitnami WordPress installation using Docker.",
   "main": "index.js",
   "scripts": {
-    "stop": "docker-compose down",
-    "dev": "yarn stop && docker-compose up -d",
+    "start": "docker-compose up -d",
+    "stop": "docker-compose stop",
+    "dev": "docker-compose up",
+    "reset": "docker-compose down -v && docker-compose up -d",
     "status": "docker-compose ps"
   },
   "author": "",

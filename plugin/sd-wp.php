@@ -19,7 +19,6 @@ class ShapeDiverConfiguratorPlugin {
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
-        add_action('wp_head', array($this, 'add_custom_css'));
         add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
@@ -56,9 +55,6 @@ class ShapeDiverConfiguratorPlugin {
     }
 
     public function register_settings() {
-        register_setting('shapediver_configurator_settings', 'shapediver_primary_color');
-        register_setting('shapediver_configurator_settings', 'shapediver_secondary_color');
-        register_setting('shapediver_configurator_settings', 'shapediver_border_type');
         register_setting('shapediver_configurator_settings', 'shapediver_configurator_url');
     }
 
@@ -73,26 +69,8 @@ class ShapeDiverConfiguratorPlugin {
                 ?>
                 <table class="form-table">
                     <tr valign="top">
-                        <th scope="row">Primary Color</th>
-                        <td><input type="color" name="shapediver_primary_color" value="<?php echo esc_attr(get_option('shapediver_primary_color', '#000000')); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Secondary Color</th>
-                        <td><input type="color" name="shapediver_secondary_color" value="<?php echo esc_attr(get_option('shapediver_secondary_color', '#ffffff')); ?>" /></td>
-                    </tr>
-                    <tr valign="top">
-                        <th scope="row">Border Type</th>
-                        <td>
-                            <select name="shapediver_border_type">
-                                <option value="solid" <?php selected(get_option('shapediver_border_type'), 'solid'); ?>>Solid</option>
-                                <option value="dashed" <?php selected(get_option('shapediver_border_type'), 'dashed'); ?>>Dashed</option>
-                                <option value="dotted" <?php selected(get_option('shapediver_border_type'), 'dotted'); ?>>Dotted</option>
-                            </select>
-                        </td>
-                    </tr>
-                    <tr valign="top">
                         <th scope="row">Configurator URL</th>
-                        <td><input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', 'http://localhost:4000')); ?>" /></td>
+                        <td><input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', 'https://appbuilder.shapediver.com/v1/main/latest/')); ?>" /></td>
                     </tr>
                 </table>
                 <?php submit_button(); ?>
@@ -110,20 +88,6 @@ class ShapeDiverConfiguratorPlugin {
                 'settings' => $this->get_configurator_settings()
             ));
         }
-    }
-
-    public function add_custom_css() {
-        $primary_color = get_option('shapediver_primary_color', '#000000');
-        $secondary_color = get_option('shapediver_secondary_color', '#ffffff');
-        $border_type = get_option('shapediver_border_type', 'solid');
-        ?>
-        <style type="text/css">
-            #configurator-modal {
-                border: 1px <?php echo $border_type; ?> <?php echo $primary_color; ?>;
-                background-color: <?php echo $secondary_color; ?>;
-            }
-        </style>
-        <?php
     }
 
     public function add_configurator_button() {
@@ -229,27 +193,27 @@ class ShapeDiverConfiguratorPlugin {
             'desc_tip' => 'true',
             'description' => __('Enter the ShapeDiver ticket.', 'woocommerce')
         ));
-        woocommerce_wp_textarea_input(array(
-            'id' => '_initial_values',
-            'label' => __('Initial Values', 'woocommerce'),
+        woocommerce_wp_text_input(array(
+            'id' => '_configurator_url',
+            'label' => __('Configurator URL', 'woocommerce'),
             'desc_tip' => 'true',
-            'description' => __('Enter initial values as JSON.', 'woocommerce')
+            'description' => __('Enter the Configurator URL for this product. If left empty, the global setting will be used.', 'woocommerce')
+        ));
+        woocommerce_wp_text_input(array(
+            'id' => '_model_state_id',
+            'label' => __('Model State ID', 'woocommerce'),
+            'desc_tip' => 'true',
+            'description' => __('Enter the Model State ID.', 'woocommerce')
         ));
         echo '</div>';
     }
 
     public function save_custom_product_fields($post_id) {
-        $model_view_url = $_POST['_model_view_url'];
-        if (!empty($model_view_url)) {
-            update_post_meta($post_id, '_model_view_url', esc_attr($model_view_url));
-        }
-        $shapediver_ticket = $_POST['_shapediver_ticket'];
-        if (!empty($shapediver_ticket)) {
-            update_post_meta($post_id, '_shapediver_ticket', esc_attr($shapediver_ticket));
-        }
-        $initial_values = $_POST['_initial_values'];
-        if (!empty($initial_values)) {
-            update_post_meta($post_id, '_initial_values', esc_attr($initial_values));
+        $fields = array('_model_view_url', '_shapediver_ticket', '_configurator_url', '_model_state_id');
+        foreach ($fields as $field) {
+            if (isset($_POST[$field])) {
+                update_post_meta($post_id, $field, sanitize_text_field($_POST[$field]));
+            }
         }
     }
 
@@ -265,7 +229,8 @@ class ShapeDiverConfiguratorPlugin {
             'price' => $product->get_price(),
             'model_view_url' => get_post_meta($product_id, '_model_view_url', true),
             'shapediver_ticket' => get_post_meta($product_id, '_shapediver_ticket', true),
-            'initial_values' => get_post_meta($product_id, '_initial_values', true),
+            'configurator_url' => get_post_meta($product_id, '_configurator_url', true),
+            'model_state_id' => get_post_meta($product_id, '_model_state_id', true),
         );
         wp_send_json_success($data);
     }
@@ -316,9 +281,6 @@ class ShapeDiverConfiguratorPlugin {
 
     private function get_configurator_settings() {
         return array(
-            'primary_color' => get_option('shapediver_primary_color', '#000000'),
-            'secondary_color' => get_option('shapediver_secondary_color', '#ffffff'),
-            'border_type' => get_option('shapediver_border_type', 'solid'),
             'configurator_url' => get_option('shapediver_configurator_url', 'https://appbuilder.shapediver.com/v1/main/latest/'),
         );
     }

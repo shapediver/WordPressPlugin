@@ -2,14 +2,19 @@ version: '3'
 
 services:
   mariadb:
-    image: mariadb:10.6
+    image: bitnami/mariadb:latest
     volumes:
       - mariadb_data:/var/lib/mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=bitnami_wordpress
-      - MYSQL_DATABASE=bitnami_wordpress
-      - MYSQL_USER=bn_wordpress
-      - MYSQL_PASSWORD=bitnami_wordpress
+      - MARIADB_ROOT_PASSWORD=your_root_password
+      - MARIADB_USER=bn_wordpress
+      - MARIADB_PASSWORD=bitnami_wordpress
+      - MARIADB_DATABASE=bitnami_wordpress
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   wordpress:
     image: bitnami/wordpress:latest
@@ -18,11 +23,12 @@ services:
       - '443:8443'
     volumes:
       - wordpress_data:/bitnami/wordpress
+      - apache_data:/bitnami/apache
       - ./plugin:/bitnami/wordpress/wp-content/plugins/shapediver-wordpress-plugin
     depends_on:
-      - mariadb
+      mariadb:
+        condition: service_healthy
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
       - WORDPRESS_DATABASE_HOST=mariadb
       - WORDPRESS_DATABASE_PORT_NUMBER=3306
       - WORDPRESS_DATABASE_USER=bn_wordpress
@@ -33,4 +39,6 @@ volumes:
   mariadb_data:
     driver: local
   wordpress_data:
+    driver: local
+  apache_data:
     driver: local

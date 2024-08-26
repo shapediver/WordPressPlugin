@@ -30,25 +30,37 @@
               const searchParams = new URLSearchParams(url.search);
 
               for (const [key, value] of Object.entries(params)) {
-                searchParams.append(key, value);
+                if (value) {
+                  searchParams.append(key, value);
+                }
               }
 
               url.search = searchParams.toString();
               return url.toString();
             }
 
-            const url = buildUrl(configuratorData.settings.configurator_url, {
+            const configuratorUrl =
+              data.configurator_url ||
+              configuratorData.settings.configurator_url;
+
+            const urlParams = {
               modelViewUrl: data.model_view_url,
               ticket: data.shapediver_ticket,
               id: productId,
+              slug: data.model_state_id,
               ...(data?.custom_data && {
                 custom_data: JSON.stringify(data.custom_data),
               }),
-            });
+            };
+
+            Object.keys(urlParams).forEach(
+              (key) => urlParams[key] === undefined && delete urlParams[key]
+            );
+
+            const url = buildUrl(configuratorUrl, urlParams);
 
             this.iframe.src = url;
             this.isIframeLoaded = true;
-            this.sendSettingsToConfigurator();
           }.bind(this)
         );
       }
@@ -91,67 +103,87 @@
       });
     },
 
-    sendSettingsToConfigurator: function () {
-      this.iframe.contentWindow.postMessage(
-        {
-          type: 'settings',
-          data: configuratorData.settings,
-        },
-        '*'
-      );
+    messageHandlers: {},
+
+    sendMessage: function (type, data) {
+      return new Promise((resolve, reject) => {
+        const messageId = Date.now().toString();
+        this.messageHandlers[messageId] = { resolve, reject };
+        this.iframe.contentWindow.postMessage(
+          { type, data, messageId },
+          this.getTargetOrigin()
+        );
+        setTimeout(() => {
+          delete this.messageHandlers[messageId];
+          reject(new Error('Message timed out'));
+        }, 5000);
+      });
     },
 
     handleMessage: function (event) {
-      var message = event.data;
+      const { type, data, messageId } = event.data;
 
-      switch (message.type) {
+      if (messageId && this.messageHandlers[messageId]) {
+        this.messageHandlers[messageId].resolve({ type, data });
+        delete this.messageHandlers[messageId];
+        return;
+      }
+
+      switch (type) {
         case 'ADD_TO_CART':
-          this.addToCart(message.data);
+          this.addToCart(data);
           break;
         case 'REMOVE_FROM_CART':
-          this.removeFromCart(message.data);
+          this.removeFromCart(data);
           break;
         case 'UPDATE_CART':
-          this.updateCart(message.data);
+          this.updateCart(data);
           break;
         case 'GET_PROFILE':
           this.getUserProfile().then((response) => {
-            this.iframe.contentWindow.postMessage(
-              {
-                type: 'PROFILE_DATA',
-                data: response.data,
-              },
-              '*'
-            );
+            this.sendMessage('PROFILE_DATA', response.data);
           });
           break;
         case 'GET_CART':
           this.getCart().then((response) => {
-            this.iframe.contentWindow.postMessage(
-              {
-                type: 'CART_DATA',
-                data: response.data,
-              },
-              '*'
-            );
+            this.sendMessage('CART_DATA', response.data);
           });
           break;
         case 'GET_PRODUCT':
           var productId = $('button[name="add-to-cart"]').val();
           this.getProductData(productId).then((response) => {
-            this.iframe.contentWindow.postMessage(
-              {
-                type: 'PRODUCT_DATA',
-                data: response.data,
-              },
-              '*'
-            );
+            this.sendMessage('PRODUCT_DATA', response.data);
           });
           break;
         case 'CLOSE_CONFIGURATOR':
           this.closeConfigurator();
           break;
+        case 'CONFIGURATOR_READY':
+          this.handleConfiguratorReady();
+          break;
       }
+    },
+
+    getTargetOrigin: function () {
+      const configuratorUrl = new URL(
+        configuratorData.settings.configurator_url
+      );
+      return configuratorUrl.origin;
+    },
+
+    handleConfiguratorReady: function () {
+      $('#open-configurator').prop('disabled', false);
+      // Send initial data to the configurator
+      this.getUserProfile().then((response) => {
+        this.sendMessage('PROFILE_DATA', response.data);
+      });
+      this.getCart().then((response) => {
+        this.sendMessage('CART_DATA', response.data);
+      });
+      var productId = $('button[name="add-to-cart"]').val();
+      this.getProductData(productId).then((response) => {
+        this.sendMessage('PRODUCT_DATA', response.data);
+      });
     },
 
     addToCart: function (data) {
@@ -169,15 +201,13 @@
         success: function (response) {
           if (response.success) {
             console.log('Product added to cart:', response.data);
-            // Optionally update the cart display or show a success message
+            this.sendMessage('CART_UPDATED', response.data);
           } else {
             console.error('Failed to add product to cart:', response.data);
-            // Show an error message to the user
           }
-        },
+        }.bind(this),
         error: function (xhr, status, error) {
           console.error('AJAX error:', status, error);
-          // Show an error message to the user
         },
       });
     },
@@ -196,15 +226,13 @@
         success: function (response) {
           if (response.success) {
             console.log('Cart updated:', response.data);
-            // Optionally update the cart display or show a success message
+            this.sendMessage('CART_UPDATED', response.data);
           } else {
             console.error('Failed to update cart:', response.data);
-            // Show an error message to the user
           }
-        },
+        }.bind(this),
         error: function (xhr, status, error) {
           console.error('AJAX error:', status, error);
-          // Show an error message to the user
         },
       });
     },
@@ -217,6 +245,17 @@
           action: 'remove_from_cart',
           product_id: data.product_id,
           variation_id: data.variation_id,
+        },
+        success: function (response) {
+          if (response.success) {
+            console.log('Product removed from cart:', response.data);
+            this.sendMessage('CART_UPDATED', response.data);
+          } else {
+            console.error('Failed to remove product from cart:', response.data);
+          }
+        }.bind(this),
+        error: function (xhr, status, error) {
+          console.error('AJAX error:', status, error);
         },
       });
     },
