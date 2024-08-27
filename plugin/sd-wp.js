@@ -47,7 +47,8 @@
               modelViewUrl: data.model_view_url,
               ticket: data.shapediver_ticket,
               id: productId,
-              slug: data.model_state_id,
+              slug: data.slug,
+              modelStateId: data.model_state_id,
               ...(data?.custom_data && {
                 custom_data: JSON.stringify(data.custom_data),
               }),
@@ -109,12 +110,10 @@
       return new Promise((resolve, reject) => {
         const messageId = Date.now().toString();
         this.messageHandlers[messageId] = { resolve, reject };
-        this.iframe.contentWindow.postMessage(
-          { type, data, messageId },
-          this.getTargetOrigin()
-        );
+        this.iframe.contentWindow.postMessage({ type, data, messageId }, '*');
         setTimeout(() => {
           delete this.messageHandlers[messageId];
+          console.error({ type, data });
           reject(new Error('Message timed out'));
         }, 5000);
       });
@@ -123,12 +122,38 @@
     handleMessage: function (event) {
       const { type, data, messageId } = event.data;
 
-      if (messageId && this.messageHandlers[messageId]) {
-        this.messageHandlers[messageId].resolve({ type, data });
-        delete this.messageHandlers[messageId];
-        return;
+      if (messageId) {
+        // This is a request from the iframe, so we need to respond
+        switch (type) {
+          case 'GET_PROFILE':
+            this.getUserProfile().then((response) => {
+              this.iframe.contentWindow.postMessage(
+                { type: 'PROFILE_DATA', data: response.data, messageId },
+                '*'
+              );
+            });
+            return;
+          case 'GET_PRODUCT':
+            var productId = $('button[name="add-to-cart"]').val();
+            this.getProductData(productId).then((response) => {
+              this.iframe.contentWindow.postMessage(
+                { type: 'PRODUCT_DATA', data: response.data, messageId },
+                '*'
+              );
+            });
+            return;
+          case 'GET_CART':
+            this.getCart().then((response) => {
+              this.iframe.contentWindow.postMessage(
+                { type: 'CART_DATA', data: response.data, messageId },
+                '*'
+              );
+            });
+            return;
+        }
       }
 
+      // Handle messages without messageId (old behavior)
       switch (type) {
         case 'ADD_TO_CART':
           this.addToCart(data);
@@ -138,22 +163,6 @@
           break;
         case 'UPDATE_CART':
           this.updateCart(data);
-          break;
-        case 'GET_PROFILE':
-          this.getUserProfile().then((response) => {
-            this.sendMessage('PROFILE_DATA', response.data);
-          });
-          break;
-        case 'GET_CART':
-          this.getCart().then((response) => {
-            this.sendMessage('CART_DATA', response.data);
-          });
-          break;
-        case 'GET_PRODUCT':
-          var productId = $('button[name="add-to-cart"]').val();
-          this.getProductData(productId).then((response) => {
-            this.sendMessage('PRODUCT_DATA', response.data);
-          });
           break;
         case 'CLOSE_CONFIGURATOR':
           this.closeConfigurator();

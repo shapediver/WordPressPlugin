@@ -35,7 +35,10 @@ class ShapeDiverConfiguratorPlugin {
         add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
         
-        // New action hooks for cart and order pages
+        
+        add_action('wp_ajax_get_cart', array($this, 'get_cart'));
+        add_action('wp_ajax_nopriv_get_cart', array($this, 'get_cart'));
+        
         add_action('woocommerce_cart_item_name', array($this, 'add_configurator_button_to_cart'), 10, 3);
         add_action('woocommerce_order_item_meta_end', array($this, 'add_configurator_button_to_order'), 10, 3);
     }
@@ -136,6 +139,38 @@ class ShapeDiverConfiguratorPlugin {
         return $cart_item;
     }
 
+    public function get_cart() {
+        $cart = WC()->cart->get_cart();
+        $cart_data = array();
+
+        foreach ($cart as $cart_item_key => $cart_item) {
+            $product = $cart_item['data'];
+            $cart_data[] = array(
+                'key' => $cart_item_key,
+                'product_id' => $cart_item['product_id'],
+                'variation_id' => $cart_item['variation_id'],
+                'quantity' => $cart_item['quantity'],
+                'name' => $product->get_name(),
+                'price' => $product->get_price(),
+                'total' => $cart_item['line_total'],
+                'custom_data' => isset($cart_item['custom_data']) ? $cart_item['custom_data'] : null,
+                'custom_price' => isset($cart_item['custom_price']) ? $cart_item['custom_price'] : null,
+            );
+        }
+
+        $cart_totals = array(
+            'subtotal' => WC()->cart->get_subtotal(),
+            'total' => WC()->cart->get_total('edit'),
+        );
+
+        $response = array(
+            'items' => $cart_data,
+            'totals' => $cart_totals,
+        );
+
+        wp_send_json_success($response);
+    }
+
     public function get_cart_item_from_session($cart_item, $values) {
         if (isset($values['custom_price'])) {
             $cart_item['custom_price'] = $values['custom_price'];
@@ -204,6 +239,12 @@ class ShapeDiverConfiguratorPlugin {
             'label' => __('Model State ID', 'woocommerce'),
             'desc_tip' => 'true',
             'description' => __('Enter the Model State ID.', 'woocommerce')
+        ));
+        woocommerce_wp_text_input(array(
+            'id' => '_slug',
+            'label' => __('Slug', 'woocommerce'),
+            'desc_tip' => 'true',
+            'description' => __('Enter the slug.', 'woocommerce')
         ));
         echo '</div>';
     }
