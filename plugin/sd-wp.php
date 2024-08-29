@@ -201,6 +201,11 @@ class ShapeDiverConfiguratorPlugin {
         if (isset($_POST['custom_data'])) {
             $custom_data = json_decode(stripslashes($_POST['custom_data']), true);
             $cart_item_data['custom_data'] = $custom_data;
+            
+            // Store modelStateId separately for easy access
+            if (isset($custom_data['modelStateId'])) {
+                $cart_item_data['model_state_id'] = $custom_data['modelStateId'];
+            }
         }
         return $cart_item_data;
     }
@@ -210,6 +215,9 @@ class ShapeDiverConfiguratorPlugin {
             foreach ($values['custom_data'] as $key => $value) {
                 $item->add_meta_data($key, $value);
             }
+        }
+        if (isset($values['model_state_id'])) {
+            $item->add_meta_data('model_state_id', $values['model_state_id']);
         }
     }
 
@@ -296,26 +304,30 @@ class ShapeDiverConfiguratorPlugin {
     public function add_configurator_button_to_cart($product_name, $cart_item, $cart_item_key) {
         $product_id = $cart_item['product_id'];
         $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        
+        $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
+
         if ($model_view_url) {
             $button = sprintf(
-                '<br><button class="button alt open-configurator" data-product-id="%d">Reconfigure</button>',
-                $product_id
+                '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s">Reconfigure</button>',
+                $product_id,
+                esc_attr($model_state_id)
             );
             return $product_name . $button;
         }
-        
+
         return $product_name;
     }
 
     public function add_configurator_button_to_order($item_id, $item, $order) {
         $product_id = $item->get_product_id();
         $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        
+        $model_state_id = $item->get_meta('model_state_id');
+
         if ($model_view_url) {
             printf(
-                '<br><button class="button alt open-configurator" data-product-id="%d">Reconfigure</button>',
-                $product_id
+                '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s">Reconfigure</button>',
+                $product_id,
+                esc_attr($model_state_id)
             );
         }
     }
