@@ -35,11 +35,11 @@ class ShapeDiverConfiguratorPlugin {
         add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
         
-        
         add_action('wp_ajax_get_cart', array($this, 'get_cart'));
         add_action('wp_ajax_nopriv_get_cart', array($this, 'get_cart'));
         
-        add_action('woocommerce_cart_item_name', array($this, 'add_configurator_button_to_cart'), 10, 3);
+        add_action('woocommerce_after_cart_item_name', array($this, 'add_configurator_button_to_cart_alternative'), 10, 2);
+        add_filter('woocommerce_cart_item_name', array($this, 'add_configurator_button_to_cart'), 10, 3);
         add_action('woocommerce_order_item_meta_end', array($this, 'add_configurator_button_to_order'), 10, 3);
     }
 
@@ -85,7 +85,8 @@ class ShapeDiverConfiguratorPlugin {
     public function enqueue_scripts() {
         if (is_product() || is_cart() || is_wc_endpoint_url('view-order')) {
             wp_enqueue_style('configurator-style', plugin_dir_url(__FILE__) . 'sd-wp.css', array(), '1.0');
-            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array('jquery'), '1.0', true);
+            wp_enqueue_script('post-robot', 'https://unpkg.com/post-robot/dist/post-robot.min.js', array(), null, true);
+            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array('jquery', 'post-robot'), '1.0', true);
             wp_localize_script('configurator-script', 'configuratorData', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'settings' => $this->get_configurator_settings()
@@ -304,25 +305,41 @@ class ShapeDiverConfiguratorPlugin {
     public function add_configurator_button_to_cart($product_name, $cart_item, $cart_item_key) {
         $product_id = $cart_item['product_id'];
         $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
-
+        $model_state_id = isset($cart_item['custom_data']['modelStateId']) ? $cart_item['custom_data']['modelStateId'] : '';
+    
         if ($model_view_url) {
             $button = sprintf(
-                '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s">Reconfigure</button>',
+                '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s" data-cart-item-key="%s">Reconfigure</button>',
                 $product_id,
-                esc_attr($model_state_id)
+                esc_attr($model_state_id),
+                esc_attr($cart_item_key)
             );
             return $product_name . $button;
         }
-
+    
         return $product_name;
+    }
+
+    public function add_configurator_button_to_cart_alternative($cart_item, $cart_item_key) {
+        $product_id = $cart_item['product_id'];
+        $model_view_url = get_post_meta($product_id, '_model_view_url', true);
+        $model_state_id = isset($cart_item['custom_data']['modelStateId']) ? $cart_item['custom_data']['modelStateId'] : '';
+    
+        if ($model_view_url) {
+            printf(
+                '<button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s" data-cart-item-key="%s">Reconfigure</button>',
+                $product_id,
+                esc_attr($model_state_id),
+                esc_attr($cart_item_key)
+            );
+        }
     }
 
     public function add_configurator_button_to_order($item_id, $item, $order) {
         $product_id = $item->get_product_id();
         $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        $model_state_id = $item->get_meta('model_state_id');
-
+        $model_state_id = $item->get_meta('modelStateId');
+    
         if ($model_view_url) {
             printf(
                 '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s">Reconfigure</button>',

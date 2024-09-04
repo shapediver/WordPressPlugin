@@ -4,7 +4,6 @@
       this.modal = document.getElementById('configurator-modal');
       this.iframe = document.getElementById('configurator-iframe');
       this.isIframeLoaded = false;
-      this.targetOrigin = this.getTargetOrigin();
       this.isConfiguratorReady = false;
       this.timeout = 10000;
 
@@ -25,6 +24,7 @@
 
       this.allowedTypes = Object.values(this.EVENTS);
       this.bindEvents();
+      console.log('🚀 Configurator initialized with events:', this.EVENTS);
     },
 
     bindEvents: function () {
@@ -33,7 +33,16 @@
         '#open-configurator, .open-configurator',
         this.openConfigurator.bind(this)
       );
-      window.addEventListener('message', this.handleMessage.bind(this), false);
+
+      Object.values(this.EVENTS).forEach((eventType) => {
+        postRobot.on(eventType, this.handleMessage.bind(this));
+      });
+
+      postRobot.on('*', (event) => {
+        console.log('📡 Received postRobot event:', event);
+        this.handleMessage(event);
+      });
+      console.log('🎭 Events bound successfully');
     },
 
     openConfigurator: function (event) {
@@ -42,6 +51,8 @@
         $(event.target).data('product-id') ||
         $('button[name="add-to-cart"]').val();
       var modelStateId = $(event.target).data('model-state-id') || '';
+
+      console.log('🔓 Opening configurator for product:', productId);
 
       if (!this.isIframeLoaded) {
         this.getProductData(productId).then(
@@ -70,6 +81,7 @@
               id: productId,
               slug: data.slug,
               modelStateId: modelStateId || data.model_state_id,
+              parentOrigin: window.location.origin,
               ...(data?.custom_data && {
                 custom_data: JSON.stringify(data.custom_data),
               }),
@@ -81,20 +93,30 @@
 
             const url = buildUrl(configuratorUrl, urlParams);
 
+            this.iframe.onload = () => {
+              console.log(
+                '🖼️ Iframe loaded:',
+                this.iframe.contentWindow.location.href
+              );
+              this.isIframeLoaded = true;
+            };
             this.iframe.src = url;
-            this.isIframeLoaded = true;
+            console.log('🔗 Setting iframe src:', url);
           }.bind(this)
         );
       }
 
       this.modal.style.display = 'block';
+      console.log('🖥️ Configurator modal displayed');
     },
 
     closeConfigurator: function () {
       this.modal.style.display = 'none';
+      console.log('🚪 Configurator closed');
     },
 
     getProductData: function (productId) {
+      console.log('📦 Fetching product data for ID:', productId);
       return $.ajax({
         url: configuratorData.ajaxurl,
         type: 'POST',
@@ -106,6 +128,7 @@
     },
 
     getUserProfile: function () {
+      console.log('👤 Fetching user profile');
       return $.ajax({
         url: configuratorData.ajaxurl,
         type: 'POST',
@@ -116,6 +139,7 @@
     },
 
     getCart: function () {
+      console.log('🛒 Fetching cart data');
       return $.ajax({
         url: configuratorData.ajaxurl,
         type: 'POST',
@@ -125,79 +149,43 @@
       });
     },
 
-    messageHandlers: {},
-
-    sendMessage: function (type, data, messageIdProp) {
-      return new Promise((resolve, reject) => {
-        const messageId = messageIdProp || Date.now().toString();
-        this.messageHandlers[messageId] = { resolve, reject };
-        this.iframe.contentWindow.postMessage(
-          { type, data, messageId },
-          this.targetOrigin
-        );
-        setTimeout(() => {
-          if (this.messageHandlers[messageId]) {
-            delete this.messageHandlers[messageId];
-
-            // Reject the promise if the message times out
-            reject(
-              new Error(
-                `Message timed out after 5 seconds: ${type} ${messageId}`
-              )
-            );
-          }
-        }, this.timeout);
-      });
+    sendMessage: function (type, data) {
+      console.log('📤 Sending message:', type, data);
+      return postRobot.send(this.iframe.contentWindow, type, data);
     },
 
     handleMessage: function (event) {
-      // Check if the message is from the configurator
-      if (
-        event?.origin !== this.targetOrigin ||
-        !this.allowedTypes.includes(event?.data?.type)
-      ) {
+      const { type, data } = event.data;
+
+      if (!this.allowedTypes.includes(type)) {
+        console.warn('⚠️ Received message with unallowed type:', type);
         return;
       }
 
-      const { type, data, messageId } = event.data;
+      console.log('📥 Handling message:', type, data);
 
       if (type === this.EVENTS.CONFIGURATOR_READY) {
         this.handleConfiguratorReady();
         return;
       }
 
-      if (messageId) {
-        // This is a request from the iframe, so we need to respond
-        switch (type) {
-          case this.EVENTS.GET_PROFILE:
-            this.getUserProfile().then((response) => {
-              this.sendMessage(
-                this.EVENTS.PROFILE_DATA,
-                response.data,
-                messageId
-              );
-            });
-            return;
-          case this.EVENTS.GET_PRODUCT:
-            var productId = $('button[name="add-to-cart"]').val();
-            this.getProductData(productId).then((response) => {
-              this.sendMessage(
-                this.EVENTS.PRODUCT_DATA,
-                response.data,
-                messageId
-              );
-            });
-            return;
-          case this.EVENTS.GET_CART:
-            this.getCart().then((response) => {
-              this.sendMessage(this.EVENTS.CART_DATA, response.data, messageId);
-            });
-            return;
-        }
-      }
-
-      // Handle messages without messageId
       switch (type) {
+        case this.EVENTS.GET_PROFILE:
+          this.getUserProfile().then((response) => {
+            this.sendMessage(this.EVENTS.PROFILE_DATA, response.data);
+          });
+          break;
+        case this.EVENTS.GET_PRODUCT:
+          var productId = $('button[name="add-to-cart"]').val();
+          this.getProductData(productId).then((response) => {
+            this.sendMessage(this.EVENTS.PRODUCT_DATA, response.data);
+          });
+          break;
+        case this.EVENTS.GET_CART:
+          this.getCart().then((response) => {
+            this.sendMessage(this.EVENTS.CART_DATA, response.data);
+          });
+          break;
         case this.EVENTS.ADD_TO_CART:
           this.addToCart(data);
           break;
@@ -210,32 +198,22 @@
         case this.EVENTS.CLOSE_CONFIGURATOR:
           this.closeConfigurator();
           break;
-        case this.EVENTS.CONFIGURATOR_READY:
-          this.handleConfiguratorReady();
-          break;
       }
-    },
-
-    getTargetOrigin: function () {
-      const configuratorUrl = new URL(
-        configuratorData.settings.configurator_url
-      );
-
-      return configuratorUrl.origin;
     },
 
     handleConfiguratorReady: async function () {
       if (this.isConfiguratorReady) {
+        console.log('⏭️ Configurator already ready, skipping');
         return;
       }
       this.isConfiguratorReady = true;
 
       $('#open-configurator').prop('disabled', false);
-
-      console.log('👌 Configurator ready');
+      console.log('🚀 Configurator is ready!');
     },
 
     addToCart: function (data) {
+      console.log('🛒 Adding to cart:', data);
       $.ajax({
         url: configuratorData.ajaxurl,
         type: 'POST',
@@ -249,18 +227,20 @@
         },
         success: function (response) {
           if (response.success) {
+            console.log('✅ Product added to cart successfully!');
             this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
           } else {
-            console.error('Failed to add product to cart:', response.data);
+            console.error('❌ Failed to add product to cart:', response.data);
           }
         }.bind(this),
         error: function (xhr, status, error) {
-          console.error('AJAX error:', status, error);
+          console.error('❌ AJAX error:', status, error);
         },
       });
     },
 
     updateCart: function (data) {
+      console.log('🔄 Updating cart:', data);
       $.ajax({
         url: configuratorData.ajaxurl,
         type: 'POST',
@@ -273,18 +253,20 @@
         },
         success: function (response) {
           if (response.success) {
+            console.log('✅ Cart updated successfully!');
             this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
           } else {
-            console.error('Failed to update cart:', response.data);
+            console.error('❌ Failed to update cart:', response.data);
           }
         }.bind(this),
         error: function (xhr, status, error) {
-          console.error('AJAX error:', status, error);
+          console.error('❌ AJAX error:', status, error);
         },
       });
     },
 
     removeFromCart: function (data) {
+      console.log('🗑️ Removing from cart:', data);
       $.ajax({
         url: configuratorData.ajaxurl,
         type: 'POST',
@@ -295,13 +277,17 @@
         },
         success: function (response) {
           if (response.success) {
+            console.log('✅ Product removed from cart successfully!');
             this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
           } else {
-            console.error('Failed to remove product from cart:', response.data);
+            console.error(
+              '❌ Failed to remove product from cart:',
+              response.data
+            );
           }
         }.bind(this),
         error: function (xhr, status, error) {
-          console.error('AJAX error:', status, error);
+          console.error('❌ AJAX error:', status, error);
         },
       });
     },
@@ -309,5 +295,6 @@
 
   $(document).ready(function () {
     configurator.init();
+    console.log('🎉 Configurator initialized!');
   });
 })(jQuery);
