@@ -1,7 +1,7 @@
 #configurator-modal {
   display: none; /* Hidden by default */
   position: fixed;
-  z-index: 100000; /* Sit on top */
+  z-index: 100000;
   left: 0;
   top: 0;
   width: 100%;

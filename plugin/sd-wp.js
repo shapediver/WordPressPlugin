@@ -1,11 +1,11 @@
-(function ($) {
+(function () {
   var configurator = {
     init: function () {
       this.modal = document.getElementById('configurator-modal');
       this.iframe = document.getElementById('configurator-iframe');
       this.isIframeLoaded = false;
       this.isConfiguratorReady = false;
-      this.timeout = 10000;
+      this.timeout = 5000;
 
       this.EVENTS = {
         GET_PROFILE: 'GET_PROFILE',
@@ -24,15 +24,15 @@
 
       this.allowedTypes = Object.values(this.EVENTS);
       this.bindEvents();
-      console.log('🚀 Configurator initialized with events:', this.EVENTS);
+      console.log('🚀 Configurator initialized');
     },
 
     bindEvents: function () {
-      $(document).on(
-        'click',
-        '#open-configurator, .open-configurator',
-        this.openConfigurator.bind(this)
-      );
+      document.addEventListener('click', (event) => {
+        if (event.target.matches('#open-configurator, .open-configurator')) {
+          this.openConfigurator(event);
+        }
+      });
 
       Object.values(this.EVENTS).forEach((eventType) => {
         postRobot.on(eventType, this.handleMessage.bind(this));
@@ -48,15 +48,15 @@
     openConfigurator: function (event) {
       event.preventDefault();
       var productId =
-        $(event.target).data('product-id') ||
-        $('button[name="add-to-cart"]').val();
-      var modelStateId = $(event.target).data('model-state-id') || '';
+        event.target.dataset.productId ||
+        document.querySelector('button[name="add-to-cart"]').value;
+      var modelStateId = event.target.dataset.modelStateId || '';
 
       console.log('🔓 Opening configurator for product:', productId);
 
       if (!this.isIframeLoaded) {
         this.getProductData(productId).then(
-          function ({ data }) {
+          function (data) {
             function buildUrl(baseUrl, params) {
               const url = new URL(baseUrl);
               const searchParams = new URLSearchParams(url.search);
@@ -94,10 +94,6 @@
             const url = buildUrl(configuratorUrl, urlParams);
 
             this.iframe.onload = () => {
-              console.log(
-                '🖼️ Iframe loaded:',
-                this.iframe.contentWindow.location.href
-              );
               this.isIframeLoaded = true;
             };
             this.iframe.src = url;
@@ -115,38 +111,47 @@
       console.log('🚪 Configurator closed');
     },
 
-    getProductData: function (productId) {
+    getProductData: async function (productId) {
       console.log('📦 Fetching product data for ID:', productId);
-      return $.ajax({
-        url: configuratorData.ajaxurl,
-        type: 'POST',
-        data: {
+      const response = await fetch(configuratorData.ajaxurl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
           action: 'get_product_data',
           product_id: productId,
-        },
+        }),
       });
+      return response.json();
     },
 
-    getUserProfile: function () {
+    getUserProfile: async function () {
       console.log('👤 Fetching user profile');
-      return $.ajax({
-        url: configuratorData.ajaxurl,
-        type: 'POST',
-        data: {
-          action: 'get_user_profile',
+      const response = await fetch(configuratorData.ajaxurl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
+        body: new URLSearchParams({
+          action: 'get_user_profile',
+        }),
       });
+      return response.json();
     },
 
-    getCart: function () {
+    getCart: async function () {
       console.log('🛒 Fetching cart data');
-      return $.ajax({
-        url: configuratorData.ajaxurl,
-        type: 'POST',
-        data: {
-          action: 'get_cart',
+      const response = await fetch(configuratorData.ajaxurl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
+        body: new URLSearchParams({
+          action: 'get_cart',
+        }),
       });
+      return response.json();
     },
 
     sendMessage: function (type, data) {
@@ -176,7 +181,9 @@
           });
           break;
         case this.EVENTS.GET_PRODUCT:
-          var productId = $('button[name="add-to-cart"]').val();
+          var productId = document.querySelector(
+            'button[name="add-to-cart"]'
+          ).value;
           this.getProductData(productId).then((response) => {
             this.sendMessage(this.EVENTS.PRODUCT_DATA, response.data);
           });
@@ -208,74 +215,84 @@
       }
       this.isConfiguratorReady = true;
 
-      $('#open-configurator').prop('disabled', false);
+      document.getElementById('open-configurator').disabled = false;
       console.log('🚀 Configurator is ready!');
     },
 
     addToCart: function (data) {
       console.log('🛒 Adding to cart:', data);
-      $.ajax({
-        url: configuratorData.ajaxurl,
-        type: 'POST',
-        data: {
+      fetch(configuratorData.ajaxurl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
           action: 'add_to_cart',
           product_id: data.product_id,
           quantity: data.quantity,
           variation_id: data.variation_id,
           custom_data: JSON.stringify(data.custom_data),
           custom_price: data.custom_price,
-        },
-        success: function (response) {
+        }),
+      })
+        .then((response) => response.json())
+        .then((response) => {
           if (response.success) {
             console.log('✅ Product added to cart successfully!');
             this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
           } else {
             console.error('❌ Failed to add product to cart:', response.data);
           }
-        }.bind(this),
-        error: function (xhr, status, error) {
-          console.error('❌ AJAX error:', status, error);
-        },
-      });
+        })
+        .catch((error) => {
+          console.error('❌ AJAX error:', error);
+        });
     },
 
     updateCart: function (data) {
       console.log('🔄 Updating cart:', data);
-      $.ajax({
-        url: configuratorData.ajaxurl,
-        type: 'POST',
-        data: {
+      fetch(configuratorData.ajaxurl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
           action: 'update_cart',
           cart_item_key: data.cart_item_key,
           quantity: data.quantity,
           custom_data: JSON.stringify(data.custom_data),
           custom_price: data.custom_price,
-        },
-        success: function (response) {
+        }),
+      })
+        .then((response) => response.json())
+        .then((response) => {
           if (response.success) {
             console.log('✅ Cart updated successfully!');
             this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
           } else {
             console.error('❌ Failed to update cart:', response.data);
           }
-        }.bind(this),
-        error: function (xhr, status, error) {
-          console.error('❌ AJAX error:', status, error);
-        },
-      });
+        })
+        .catch((error) => {
+          console.error('❌ AJAX error:', error);
+        });
     },
 
     removeFromCart: function (data) {
       console.log('🗑️ Removing from cart:', data);
-      $.ajax({
-        url: configuratorData.ajaxurl,
-        type: 'POST',
-        data: {
+      fetch(configuratorData.ajaxurl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
           action: 'remove_from_cart',
           product_id: data.product_id,
           variation_id: data.variation_id,
-        },
-        success: function (response) {
+        }),
+      })
+        .then((response) => response.json())
+        .then((response) => {
           if (response.success) {
             console.log('✅ Product removed from cart successfully!');
             this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
@@ -285,16 +302,15 @@
               response.data
             );
           }
-        }.bind(this),
-        error: function (xhr, status, error) {
-          console.error('❌ AJAX error:', status, error);
-        },
-      });
+        })
+        .catch((error) => {
+          console.error('❌ AJAX error:', error);
+        });
     },
   };
 
-  $(document).ready(function () {
+  document.addEventListener('DOMContentLoaded', function () {
     configurator.init();
     console.log('🎉 Configurator initialized!');
   });
-})(jQuery);
+})();

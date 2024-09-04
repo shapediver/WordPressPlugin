@@ -11,42 +11,43 @@
  * WC requires at least: 3.0
  */
 
-if (!defined('ABSPATH')) exit; // Exit if accessed directly
+// Exit if accessed directly
+if (!defined('ABSPATH')) exit;
 
 class ShapeDiverConfiguratorPlugin {
     public function __construct() {
+        // Initialize plugin
         add_action('init', array($this, 'init'));
+
+        // Admin-related actions
         add_action('admin_menu', array($this, 'add_admin_menu'));
         add_action('admin_init', array($this, 'register_settings'));
+
+        // Enqueue scripts and styles
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
+
+        // WooCommerce product page modifications
         add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
         add_action('woocommerce_process_product_meta', array($this, 'save_custom_product_fields'));
-        add_action('wp_ajax_get_product_data', array($this, 'get_product_data'));
-        add_action('wp_ajax_nopriv_get_product_data', array($this, 'get_product_data'));
-        add_action('wp_ajax_get_user_profile', array($this, 'get_user_profile'));
-        add_filter('woocommerce_add_to_cart_validation', array($this, 'validate_add_to_cart'), 10, 3);
-        add_action('wp_ajax_add_to_cart', array($this, 'add_to_cart'));
-        add_action('wp_ajax_nopriv_add_to_cart', array($this, 'add_to_cart'));
-        add_filter('woocommerce_add_cart_item', array($this, 'add_custom_price_to_cart_item'), 10, 2);
-        add_filter('woocommerce_get_cart_item_from_session', array($this, 'get_cart_item_from_session'), 10, 2);
-        add_filter('woocommerce_add_cart_item_data', array($this, 'add_custom_data_to_cart_item'), 10, 3);
-        add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
-        add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
-        
-        add_action('wp_ajax_get_cart', array($this, 'get_cart'));
-        add_action('wp_ajax_nopriv_get_cart', array($this, 'get_cart'));
-        
-        add_action('woocommerce_after_cart_item_name', array($this, 'add_configurator_button_to_cart_alternative'), 10, 2);
-        add_filter('woocommerce_cart_item_name', array($this, 'add_configurator_button_to_cart'), 10, 3);
-        add_action('woocommerce_order_item_meta_end', array($this, 'add_configurator_button_to_order'), 10, 3);
+
+        // AJAX handlers
+        $this->register_ajax_handlers();
+
+        // WooCommerce cart and checkout modifications
+        $this->modify_woocommerce_cart_and_checkout();
+
+        // Display custom data in cart and order
+        $this->display_custom_data();
     }
 
+    // Initialize plugin
     public function init() {
-        // Initialize plugin
+        // Placeholder for future initialization code
     }
 
+    // Add menu item to WordPress admin
     public function add_admin_menu() {
         add_options_page(
             'ShapeDiver Configurator Settings',
@@ -57,10 +58,12 @@ class ShapeDiverConfiguratorPlugin {
         );
     }
 
+    // Register plugin settings
     public function register_settings() {
         register_setting('shapediver_configurator_settings', 'shapediver_configurator_url');
     }
 
+    // Render settings page in WordPress admin
     public function settings_page() {
         ?>
         <div class="wrap">
@@ -82,11 +85,12 @@ class ShapeDiverConfiguratorPlugin {
         <?php
     }
 
+    // Enqueue necessary scripts and styles
     public function enqueue_scripts() {
         if (is_product() || is_cart() || is_wc_endpoint_url('view-order')) {
-            wp_enqueue_style('configurator-style', plugin_dir_url(__FILE__) . 'sd-wp.css', array(), '1.0');
             wp_enqueue_script('post-robot', 'https://unpkg.com/post-robot/dist/post-robot.min.js', array(), null, true);
-            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array('jquery', 'post-robot'), '1.0', true);
+            wp_enqueue_style('configurator-style', plugin_dir_url(__FILE__) . 'sd-wp.css', array(), '1.0');
+            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array('post-robot'), '1.0', true);
             wp_localize_script('configurator-script', 'configuratorData', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'settings' => $this->get_configurator_settings()
@@ -94,10 +98,12 @@ class ShapeDiverConfiguratorPlugin {
         }
     }
 
+    // Add "Customize" button to product page
     public function add_configurator_button() {
         echo '<button id="open-configurator" class="button alt wp-element-button single_add_to_cart_button">Customize</button>';
     }
 
+    // Add modal for configurator iframe
     public function add_configurator_modal() {
         if (is_product() || is_cart() || is_wc_endpoint_url('view-order')) {
             ?>
@@ -110,6 +116,37 @@ class ShapeDiverConfiguratorPlugin {
         }
     }
 
+    // Register AJAX handlers
+    private function register_ajax_handlers() {
+        $ajax_actions = array(
+            'get_product_data',
+            'get_user_profile',
+            'add_to_cart',
+            'get_cart'
+        );
+
+        foreach ($ajax_actions as $action) {
+            add_action("wp_ajax_{$action}", array($this, $action));
+            add_action("wp_ajax_nopriv_{$action}", array($this, $action));
+        }
+    }
+
+    // Modify WooCommerce cart and checkout
+    private function modify_woocommerce_cart_and_checkout() {
+        add_filter('woocommerce_add_cart_item', array($this, 'add_custom_price_to_cart_item'), 10, 2);
+        add_filter('woocommerce_get_cart_item_from_session', array($this, 'get_cart_item_from_session'), 10, 2);
+        add_filter('woocommerce_add_cart_item_data', array($this, 'add_custom_data_to_cart_item'), 10, 3);
+        add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
+    }
+
+    // Display custom data in cart and order
+    private function display_custom_data() {
+        add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
+        add_action('woocommerce_after_cart_item_name', array($this, 'add_button_after_cart_item'), 10, 2);
+        add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
+    }
+
+    // AJAX handler to add product to cart
     public function add_to_cart() {
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
         $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
@@ -133,6 +170,7 @@ class ShapeDiverConfiguratorPlugin {
         wp_die();
     }
 
+    // Add custom price to cart item
     public function add_custom_price_to_cart_item($cart_item, $cart_item_key) {
         if (isset($cart_item['custom_price'])) {
             $cart_item['data']->set_price($cart_item['custom_price']);
@@ -140,6 +178,7 @@ class ShapeDiverConfiguratorPlugin {
         return $cart_item;
     }
 
+    // AJAX handler to get cart data
     public function get_cart() {
         $cart = WC()->cart->get_cart();
         $cart_data = array();
@@ -172,6 +211,7 @@ class ShapeDiverConfiguratorPlugin {
         wp_send_json_success($response);
     }
 
+    // Restore custom price when getting cart item from session
     public function get_cart_item_from_session($cart_item, $values) {
         if (isset($values['custom_price'])) {
             $cart_item['custom_price'] = $values['custom_price'];
@@ -180,6 +220,7 @@ class ShapeDiverConfiguratorPlugin {
         return $cart_item;
     }
 
+    // Display custom data in cart
     public function display_custom_data_in_cart($item_data, $cart_item) {
         if (isset($cart_item['custom_data'])) {
             foreach ($cart_item['custom_data'] as $key => $value) {
@@ -189,15 +230,26 @@ class ShapeDiverConfiguratorPlugin {
                 );
             }
         }
-        if (isset($cart_item['custom_price'])) {
-            $item_data[] = array(
-                'key' => 'Custom Price',
-                'value' => wc_price($cart_item['custom_price'])
-            );
-        }
+        
         return $item_data;
     }
 
+    // Add "View 3D Model" button after cart item
+    public function add_button_after_cart_item($cart_item, $cart_item_key) {
+        if (isset($cart_item['custom_data'])) {
+            echo '<button class="button alt shapediver-view-model" data-model-state-id="' . esc_attr($cart_item['custom_data']['modelStateId']) . '">View 3D Model</button>';
+        }
+    }
+
+    // Add "View 3D Model" button after order item
+    public function add_button_after_order_item($item_id, $item, $order) {
+        $model_state_id = wc_get_order_item_meta($item_id, 'modelStateId', true);
+        if ($model_state_id) {
+            echo '<button class="button alt shapediver-view-model" data-model-state-id="' . esc_attr($model_state_id) . '">View 3D Model</button>';
+        }
+    }
+
+    // Add custom data to cart item
     public function add_custom_data_to_cart_item($cart_item_data, $product_id, $variation_id) {
         if (isset($_POST['custom_data'])) {
             $custom_data = json_decode(stripslashes($_POST['custom_data']), true);
@@ -211,6 +263,7 @@ class ShapeDiverConfiguratorPlugin {
         return $cart_item_data;
     }
 
+    // Add custom data to order items
     public function add_custom_data_to_order_items($item, $cart_item_key, $values, $order) {
         if (isset($values['custom_data'])) {
             foreach ($values['custom_data'] as $key => $value) {
@@ -222,6 +275,7 @@ class ShapeDiverConfiguratorPlugin {
         }
     }
 
+    // Add custom product fields to WooCommerce product data
     public function add_custom_product_fields() {
         global $woocommerce, $post;
         echo '<div class="options_group">';
@@ -258,8 +312,9 @@ class ShapeDiverConfiguratorPlugin {
         echo '</div>';
     }
 
+    // Save custom product fields
     public function save_custom_product_fields($post_id) {
-        $fields = array('_model_view_url', '_shapediver_ticket', '_configurator_url', '_model_state_id');
+        $fields = array('_model_view_url', '_shapediver_ticket', '_configurator_url', '_model_state_id', '_slug');
         foreach ($fields as $field) {
             if (isset($_POST[$field])) {
                 update_post_meta($post_id, $field, sanitize_text_field($_POST[$field]));
@@ -267,6 +322,7 @@ class ShapeDiverConfiguratorPlugin {
         }
     }
 
+    // AJAX handler to get product data
     public function get_product_data() {
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
         $product = wc_get_product($product_id);
@@ -297,58 +353,7 @@ class ShapeDiverConfiguratorPlugin {
         );
         wp_send_json_success($data);
     }
-    public function validate_add_to_cart($passed, $product_id, $quantity) {
-        // Add custom validation logic here
-        return $passed;
-    }
-
-    public function add_configurator_button_to_cart($product_name, $cart_item, $cart_item_key) {
-        $product_id = $cart_item['product_id'];
-        $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        $model_state_id = isset($cart_item['custom_data']['modelStateId']) ? $cart_item['custom_data']['modelStateId'] : '';
     
-        if ($model_view_url) {
-            $button = sprintf(
-                '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s" data-cart-item-key="%s">Reconfigure</button>',
-                $product_id,
-                esc_attr($model_state_id),
-                esc_attr($cart_item_key)
-            );
-            return $product_name . $button;
-        }
-    
-        return $product_name;
-    }
-
-    public function add_configurator_button_to_cart_alternative($cart_item, $cart_item_key) {
-        $product_id = $cart_item['product_id'];
-        $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        $model_state_id = isset($cart_item['custom_data']['modelStateId']) ? $cart_item['custom_data']['modelStateId'] : '';
-    
-        if ($model_view_url) {
-            printf(
-                '<button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s" data-cart-item-key="%s">Reconfigure</button>',
-                $product_id,
-                esc_attr($model_state_id),
-                esc_attr($cart_item_key)
-            );
-        }
-    }
-
-    public function add_configurator_button_to_order($item_id, $item, $order) {
-        $product_id = $item->get_product_id();
-        $model_view_url = get_post_meta($product_id, '_model_view_url', true);
-        $model_state_id = $item->get_meta('modelStateId');
-    
-        if ($model_view_url) {
-            printf(
-                '<br><button class="button alt open-configurator" data-product-id="%d" data-model-state-id="%s">Reconfigure</button>',
-                $product_id,
-                esc_attr($model_state_id)
-            );
-        }
-    }
-
     private function get_configurator_settings() {
         return array(
             'configurator_url' => get_option('shapediver_configurator_url', 'https://appbuilder.shapediver.com/v1/main/latest/'),
