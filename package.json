@@ -1,15 +1,15 @@
 {
   "name": "shapediver-wordpress-plugin",
   "version": "1.0.0",
-  "description": "This README provides instructions on how to set up and manage your Bitnami WordPress installation using Docker.",
-  "main": "index.js",
+  "description": "ShapeDiver WordPress Plugin",
   "scripts": {
-    "start": "docker-compose up -d",
-    "stop": "docker-compose stop",
+    "dev:start": "docker-compose up -d",
+    "dev:stop": "docker-compose stop",
     "dev": "docker-compose up",
-    "reset": "docker-compose down -v && docker-compose up -d",
-    "status": "docker-compose ps"
+    "dev:reset": "docker-compose down -v && docker-compose up -d",
+    "dev:status": "docker-compose ps",
+    "build": "./build.sh"
   },
-  "author": "",
-  "license": "ISC"
+  "author": "ShapeDiver GmbH",
+  "license": "MIT"
 }

@@ -24,7 +24,7 @@ services:
     volumes:
       - wordpress_data:/bitnami/wordpress
       - apache_data:/bitnami/apache
-      - ./plugin:/bitnami/wordpress/wp-content/plugins/shapediver-wordpress-plugin
+      - ./dist:/bitnami/wordpress/wp-content/plugins/shapediver-wordpress-plugin
     depends_on:
       mariadb:
         condition: service_healthy
