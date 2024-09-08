@@ -1,16 +1,34 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "module": "none",
-    "lib": ["dom", "esnext"],
-    "strict": true,
-    "esModuleInterop": true,
+    "baseUrl": "src",
+    "types": [
+      "vite/client",
+      "node"
+    ],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
     "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
     "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strictNullChecks": true,
     "outDir": "./dist",
-    "rootDir": "./src",
     "sourceMap": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.spec.ts"]
+  "include": [
+    "src/sd-wp.ts"
+  ]
 }

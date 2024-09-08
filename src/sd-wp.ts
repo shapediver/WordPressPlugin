@@ -1,397 +1,175 @@
-(() => {
-  interface Configurator {
-    modal: HTMLElement | null;
-    iframe: HTMLIFrameElement | null;
-    isIframeLoaded: boolean;
-    isConfiguratorReady: boolean;
-    timeout: number;
-    showConsoleLog: boolean;
-    EVENTS: Record<string, string>;
-    allowedTypes: string[];
+import { CrossWindowApiFactory } from "./shared/modules/crosswindowapi/crosswindowapi";
+import { ICrossWindowApi } from "./shared/modules/crosswindowapi/types/crosswindowapi";
 
-    init(): void;
-    log(...message: any[]): void;
-    bindEvents(): void;
-    openConfigurator(event: MouseEvent): void;
-    closeConfigurator(): void;
-    getProductData(productId: string): Promise<any>;
-    getUserProfile(): Promise<any>;
-    getCart(): Promise<any>;
-    sendMessage(type: string, data: any): Promise<any>;
-    handleMessage(event: { data: { type: string; data: any } }): void;
-    handleConfiguratorReady(): Promise<void>;
-    addToCart(data: {
-      product_id: string;
-      quantity: number;
-      variation_id?: string;
-      custom_data: any;
-      custom_price?: number;
-    }): void;
-    updateCart(data: {
-      cart_item_key: string;
-      quantity: number;
-      custom_data: any;
-      custom_price?: number;
-    }): void;
-    removeFromCart(data: { product_id: string; variation_id?: string }): void;
-  }
 
-  const configurator: Configurator = {
-    modal: null,
-    iframe: null,
-    isIframeLoaded: false,
-    isConfiguratorReady: false,
-    timeout: 5000,
-    showConsoleLog: true,
+const MODAL_ELEMENT_ID = 'configurator-modal';
+const IFRAME_ELEMENT_ID = 'configurator-iframe';
+const OPEN_CONFIGURATOR_BUTTON_ID = 'open-configurator';
+const CROSSWINDOW_API_TIMEOUT = 10000;
 
-    EVENTS: {
-      GET_PROFILE: 'GET_PROFILE',
-      GET_PRODUCT: 'GET_PRODUCT',
-      GET_CART: 'GET_CART',
-      ADD_TO_CART: 'ADD_TO_CART',
-      REMOVE_FROM_CART: 'REMOVE_FROM_CART',
-      UPDATE_CART: 'UPDATE_CART',
-      CLOSE_CONFIGURATOR: 'CLOSE_CONFIGURATOR',
-      CONFIGURATOR_READY: 'CONFIGURATOR_READY',
-      PROFILE_DATA: 'PROFILE_DATA',
-      PRODUCT_DATA: 'PRODUCT_DATA',
-      CART_DATA: 'CART_DATA',
-      CART_UPDATED: 'CART_UPDATED',
-    },
+/**
+ * The configurator manager.
+ */
+interface IConfiguratorManager {
 
-    allowedTypes: [],
+	/**
+	 * Open the configurator, which means: 
+	 * 
+	 *   * Load the configurator for the product defined by the target 
+	 *     element of the event. 
+	 *   * Show the configurator to the end user.
+	 * 
+	 * @param event 
+	 */
+	openConfiguratorEventHandler(event: MouseEvent): Promise<void>
 
-    init() {
-      this.modal = document.getElementById('configurator-modal');
-      this.iframe = document.getElementById(
-        'configurator-iframe'
-      ) as HTMLIFrameElement;
-      this.allowedTypes = Object.values(this.EVENTS);
-      this.bindEvents();
-      this.log('🚀 Configurator initialized');
-    },
+	/**
+	 * Hide the configurator from the end user.
+	 */
+	hideConfigurator(): void
 
-    log(...message: any[]) {
-      if (this.showConsoleLog) {
-        console.log(...message);
-      }
-    },
+	/**
+	 * Show the configurator to the end user.
+	 */
+	showConfigurator(): void
 
-    bindEvents() {
-      document.addEventListener('click', (event) => {
-        const target = event.target as HTMLElement;
-        if (target.matches('#open-configurator, .open-configurator')) {
-          this.openConfigurator(event);
-        }
-      });
+	/**
+	 * Enable the configurator for the end user. 
+	 * This means that the user is shown a button to open the configurator.
+	 */
+	enableConfigurator(): void
+}
 
-      Object.values(this.EVENTS).forEach((eventType) => {
-        (window as any).postRobot.on(eventType, this.handleMessage.bind(this));
-      });
+class ConfiguratorManager implements IConfiguratorManager {
 
-      (window as any).postRobot.on('*', (event: any) => {
-        this.log('📡 Received postRobot event:', event);
-        this.handleMessage(event);
-      });
-      this.log('🎭 Events bound successfully');
-    },
+	/**
+	 * Controls whether debug messages are shown in the console.
+	 */
+	private debug: boolean;
 
-    openConfigurator(event: MouseEvent) {
-      event.preventDefault();
-      const target = event.target as HTMLElement;
-      const productId =
-        target.dataset.productId ||
-        (
-          document.querySelector(
-            'button[name="add-to-cart"]'
-          ) as HTMLButtonElement
-        ).value;
-      const modelStateId = target.dataset.modelStateId || '';
+	/**
+	 * The element containing the configurator iframe. 
+	 * Used to show/hide the configurator.
+	 */
+	private modal: HTMLElement;
 
-      this.log('🔓 Opening configurator for product:', productId);
+	/**
+	 * The configurator iframe.
+	 */
+	iframe: HTMLIFrameElement;
 
-      if (!this.isIframeLoaded && this.iframe) {
-        this.getProductData(productId).then((data) => {
-          function buildUrl(baseUrl: string, params: Record<string, string>) {
-            const url = new URL(baseUrl);
-            const searchParams = new URLSearchParams(url.search);
+	/**
+	 * TODO clarify
+	 */
+	//isIframeLoaded: boolean;
 
-            for (const [key, value] of Object.entries(params)) {
-              if (value) {
-                searchParams.append(key, value);
-              }
-            }
+	/**
+	 * TODO clarify
+	 */
+	//isConfiguratorReady: boolean;
+	
+	private iframeApi: Promise<ICrossWindowApi>;
 
-            url.search = searchParams.toString();
-            return url.toString();
-          }
+	constructor(debug: boolean) {
+		this.debug = debug;
 
-          const configuratorUrl =
-            data.configurator_url ||
-            (window as any).configuratorData.settings.configurator_url;
+		const modal = document.getElementById(MODAL_ELEMENT_ID);
+		if (!modal) {
+			throw new Error(`ConfiguratorManager: Element with id ${MODAL_ELEMENT_ID} not found.`);
+		}
+		this.modal = modal;
 
-          const urlParams: Record<string, string> = {
-            modelViewUrl: data.model_view_url,
-            ticket: data.shapediver_ticket,
-            id: productId,
-            slug: data.slug,
-            modelStateId: modelStateId || data.model_state_id,
-            parentOrigin: window.location.origin,
-            ...(data?.custom_data && {
-              custom_data: JSON.stringify(data.custom_data),
-            }),
-          };
 
-          Object.keys(urlParams).forEach(
-            (key) => urlParams[key] === undefined && delete urlParams[key]
-          );
+		const iframe = document.getElementById(IFRAME_ELEMENT_ID) as HTMLIFrameElement | null;
+		if (!iframe) {
+			throw new Error(`ConfiguratorManager: iframe with id ${IFRAME_ELEMENT_ID} not found.`);
+		}
+		this.iframe = iframe;
 
-          const url = buildUrl(configuratorUrl, urlParams);
+		if (!iframe.contentWindow) {
+			throw new Error(`ConfiguratorManager: contentWindow not set for the iframe?!`);
+		}
 
-          if (this.iframe) {
-            this.iframe.onload = () => {
-              this.isIframeLoaded = true;
-            };
-            this.iframe.src = url;
-            this.log('🔗 Setting iframe src:', url);
-          }
-        });
-      }
+		this.iframeApi = this.loadConfigurator(iframe, "http://localhost:3000");
+	
+		this.bindEvents();
+	}
+	
+	log(...message: any[]): void {
+		if (this.debug)
+			console.log("ConfiguratorManager", ...message);
+	}
 
-      if (this.modal) {
-        this.modal.style.display = 'block';
-      }
-      this.log('🖥️ Configurator modal displayed');
-    },
+	bindEvents() {
+		document.addEventListener('click', (event) => {
+			const target = event.target as HTMLElement;
+			if (target.matches('#open-configurator, .open-configurator')) {
+				this.openConfiguratorEventHandler(event);
+			}
+		});
 
-    closeConfigurator() {
-      if (this.modal) {
-        this.modal.style.display = 'none';
-      }
-      this.log('🚪 Configurator closed');
-    },
+		this.log('🎭 Events bound successfully');
+	}
 
-    async getProductData(productId: string) {
-      this.log('📦 Fetching product data for ID:', productId);
-      const response = await fetch((window as any).configuratorData.ajaxurl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'get_product_data',
-          product_id: productId,
-        }),
-      });
-      return response.json();
-    },
+	openConfiguratorEventHandler(event: MouseEvent): Promise<void> {
 
-    async getUserProfile() {
-      this.log('👤 Fetching user profile');
-      const response = await fetch((window as any).configuratorData.ajaxurl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'get_user_profile',
-        }),
-      });
-      return response.json();
-    },
+		event.preventDefault();
+		const target = event.target as HTMLElement;
+		const productId =
+			target.dataset.productId ||
+			(
+				document.querySelector(
+					'button[name="add-to-cart"]'
+				) as HTMLButtonElement
+			).value;
+		const modelStateId = target.dataset.modelStateId || '';
 
-    async getCart() {
-      this.log('🛒 Fetching cart data');
-      const response = await fetch((window as any).configuratorData.ajaxurl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'get_cart',
-        }),
-      });
-      return response.json();
-    },
+		// TODO use loadConfigurator and showConfigurator
+		throw new Error("Method not implemented.");
+	}
 
-    sendMessage(type: string, data: any) {
-      this.log('📤 Sending message:', type, data);
-      return (window as any).postRobot.send(
-        this.iframe?.contentWindow,
-        type,
-        data
-      );
-    },
+	loadConfigurator(iframe: HTMLIFrameElement, url: string): Promise<ICrossWindowApi> {
+		if (!iframe.contentWindow) {
+			throw new Error(`ConfiguratorManager: contentWindow not set for the iframe?!`);
+		}
 
-    handleMessage(event: { data: { type: string; data: any } }) {
-      const { type, data } = event.data;
+		return new Promise((resolve, reject) => {
+			iframe.onload = async () => {
+				this.log('iframe loaded:', iframe);
+				const api = await CrossWindowApiFactory.getWindowApi(iframe.contentWindow!, 'plugin', 'app', CROSSWINDOW_API_TIMEOUT);
+				this.log('iframe API created:', api);
+				resolve(api);
+			};
+			iframe.src = url;
+			this.log('🔗 Setting iframe src:', url);
+		});
+	}
 
-      if (!this.allowedTypes.includes(type)) {
-        this.log('⚠️ Received message with unallowed type:', type);
-        return;
-      }
+	hideConfigurator(): void {
+		this.modal.style.display = 'none';
+		this.log('🚪 Configurator modal hidden');
+	}
 
-      this.log('📥 Handling message:', type, data);
+	showConfigurator(): void {
+		this.modal.style.display = 'block';
+		this.log('🖥️ Configurator modal displayed');
+	}
 
-      if (type === this.EVENTS.CONFIGURATOR_READY) {
-        this.handleConfiguratorReady();
-        return;
-      }
+	enableConfigurator(): void {
+		const openConfiguratorButton = document.getElementById(
+			OPEN_CONFIGURATOR_BUTTON_ID
+		) as HTMLButtonElement;
 
-      switch (type) {
-        case this.EVENTS.GET_PROFILE:
-          this.getUserProfile().then((response) => {
-            this.sendMessage(this.EVENTS.PROFILE_DATA, response.data);
-          });
-          break;
-        case this.EVENTS.GET_PRODUCT:
-          const productId = (
-            document.querySelector(
-              'button[name="add-to-cart"]'
-            ) as HTMLButtonElement
-          ).value;
-          this.getProductData(productId).then((response) => {
-            this.sendMessage(this.EVENTS.PRODUCT_DATA, response.data);
-          });
-          break;
-        case this.EVENTS.GET_CART:
-          this.getCart().then((response) => {
-            this.sendMessage(this.EVENTS.CART_DATA, response.data);
-          });
-          break;
-        case this.EVENTS.ADD_TO_CART:
-          this.addToCart(data);
-          break;
-        case this.EVENTS.REMOVE_FROM_CART:
-          this.removeFromCart(data);
-          break;
-        case this.EVENTS.UPDATE_CART:
-          this.updateCart(data);
-          break;
-        case this.EVENTS.CLOSE_CONFIGURATOR:
-          this.closeConfigurator();
-          break;
-      }
-    },
+		if (!openConfiguratorButton) {
+			this.log(`ConfiguratorManager: Element with id ${OPEN_CONFIGURATOR_BUTTON_ID} not found.`);
+		}
+		else {
+			openConfiguratorButton.disabled = false;
+		}
 
-    async handleConfiguratorReady() {
-      if (this.isConfiguratorReady) {
-        this.log('⏭️ Configurator already ready, skipping');
-        return;
-      }
-      this.isConfiguratorReady = true;
+		this.log('🚀 Configurator enabled!');
+	}
 
-      const openConfiguratorButton = document.getElementById(
-        'open-configurator'
-      ) as HTMLButtonElement;
-      if (openConfiguratorButton) {
-        openConfiguratorButton.disabled = false;
-      }
-      this.log('🚀 Configurator is ready!');
-    },
+}
 
-    addToCart(data: {
-      product_id: string;
-      quantity: number;
-      variation_id?: string;
-      custom_data: any;
-      custom_price?: number;
-    }) {
-      this.log('🛒 Adding to cart:', data);
-      fetch((window as any).configuratorData.ajaxurl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'add_to_cart',
-          product_id: data.product_id,
-          quantity: data.quantity.toString(),
-          variation_id: data.variation_id || '',
-          custom_data: JSON.stringify(data.custom_data),
-          custom_price: data.custom_price?.toString() || '',
-        }),
-      })
-        .then((response) => response.json())
-        .then((response) => {
-          if (response.success) {
-            this.log('✅ Product added to cart successfully!');
-            this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
-          } else {
-            console.error('❌ Failed to add product to cart:', response.data);
-          }
-        })
-        .catch((error) => {
-          console.error('❌ AJAX error:', error);
-        });
-    },
-
-    updateCart(data: {
-      cart_item_key: string;
-      quantity: number;
-      custom_data: any;
-      custom_price?: number;
-    }) {
-      this.log('🔄 Updating cart:', data);
-      fetch((window as any).configuratorData.ajaxurl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'update_cart',
-          cart_item_key: data.cart_item_key,
-          quantity: data.quantity.toString(),
-          custom_data: JSON.stringify(data.custom_data),
-          custom_price: data.custom_price?.toString() || '',
-        }),
-      })
-        .then((response) => response.json())
-        .then((response) => {
-          if (response.success) {
-            this.log('✅ Cart updated successfully!');
-            this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
-          } else {
-            console.error('❌ Failed to update cart:', response.data);
-          }
-        })
-        .catch((error) => {
-          console.error('❌ AJAX error:', error);
-        });
-    },
-
-    removeFromCart(data: { product_id: string; variation_id?: string }) {
-      this.log('🗑️ Removing from cart:', data);
-      fetch((window as any).configuratorData.ajaxurl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'remove_from_cart',
-          product_id: data.product_id,
-          variation_id: data.variation_id || '',
-        }),
-      })
-        .then((response) => response.json())
-        .then((response) => {
-          if (response.success) {
-            this.log('✅ Product removed from cart successfully!');
-            this.sendMessage(this.EVENTS.CART_UPDATED, response.data);
-          } else {
-            console.error(
-              '❌ Failed to remove product from cart:',
-              response.data
-            );
-          }
-        })
-        .catch((error) => {
-          console.error('❌ AJAX error:', error);
-        });
-    },
-  };
-
-  document.addEventListener('DOMContentLoaded', () => {
-    configurator.init();
-  });
-})();
+const configuratorManager = new ConfiguratorManager(true);

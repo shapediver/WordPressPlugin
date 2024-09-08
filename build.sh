@@ -14,39 +14,13 @@ print_colored() {
 }
 
 # Set variables
-SRC_DIR="src"
 DIST_DIR="dist"
-PLUGIN_NAME="Shapediver WordPress Plugin"
 FILE_NAME="sd-wp"
 
-# Create dist directory if it doesn't exist
-print_colored $YELLOW "Creating dist directory if it doesn't exist..."
-mkdir -p $DIST_DIR
-
-# Remove existing files in dist directory
-print_colored $YELLOW "Removing existing files in dist directory..."
-rm -rf $DIST_DIR/*
-
-# Compile TypeScript to JavaScript
-print_colored $YELLOW "Compiling TypeScript to JavaScript..."
-if npx tsc; then
-    print_colored $GREEN "TypeScript compilation successful."
-else
-    print_colored $RED "TypeScript compilation failed. Exiting."
-    exit 1
-fi
-
-# Copy PHP and CSS files
-print_colored $YELLOW "Copying PHP and CSS files to dist directory..."
-cp $SRC_DIR/$FILE_NAME.php $DIST_DIR/
-cp $SRC_DIR/$FILE_NAME.css $DIST_DIR/
-
-# Check if files were copied successfully
-if [ -f "$DIST_DIR/$FILE_NAME.php" ] && [ -f "$DIST_DIR/$FILE_NAME.css" ]; then
-    print_colored $GREEN "Files copied successfully."
-else
-    print_colored $RED "Error copying files. Exiting."
-    exit 1
+# Remove existing zip file
+if [ -f "$FILE_NAME.zip" ]; then
+    print_colored $YELLOW "Removing existing zip file..."
+    rm $FILE_NAME.zip
 fi
 
 # Create zip archive

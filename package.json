@@ -2,17 +2,27 @@
   "name": "shapediver-wordpress-plugin",
   "version": "1.0.0",
   "description": "ShapeDiver WordPress Plugin",
+  "type": "module",
   "scripts": {
-    "dev:start": "docker-compose up -d",
-    "dev:stop": "docker-compose stop",
-    "dev": "docker-compose up",
-    "dev:reset": "docker-compose down -v && docker-compose up -d",
-    "dev:status": "docker-compose ps",
-    "build": "./build.sh"
+    "wp:start": "docker-compose up -d",
+    "wp:stop": "docker-compose stop",
+    "wp": "docker-compose up",
+    "wp:reset": "docker-compose down -v && docker-compose up -d",
+    "wp:status": "docker-compose ps",
+    "build": "tsc && vite build && ./build.sh",
+    "start": "vite",
+    "optimize": "tsc && vite optimize --force && ./build.sh"
   },
   "author": "ShapeDiver GmbH",
   "license": "MIT",
   "devDependencies": {
-    "typescript": "^5.5.4"
+    "@types/node": "20",
+    "@types/post-robot": "^10.0.6",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.3",
+    "vite-plugin-static-copy": "^1.0.6"
+  },
+  "dependencies": {
+    "post-robot": "^8.0.32"
   }
 }

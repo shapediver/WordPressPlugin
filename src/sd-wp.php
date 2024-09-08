@@ -88,9 +88,8 @@ class ShapeDiverConfiguratorPlugin {
     // Enqueue necessary scripts and styles
     public function enqueue_scripts() {
         if (is_product() || is_cart() || is_wc_endpoint_url('view-order')) {
-            wp_enqueue_script('post-robot', 'https://unpkg.com/post-robot/dist/post-robot.min.js', array(), null, true);
             wp_enqueue_style('configurator-style', plugin_dir_url(__FILE__) . 'sd-wp.css', array(), '1.0');
-            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array('post-robot'), '1.0', true);
+            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array(), '1.0', true);
             wp_localize_script('configurator-script', 'configuratorData', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'settings' => $this->get_configurator_settings()
@@ -192,7 +191,7 @@ class ShapeDiverConfiguratorPlugin {
                 'quantity' => $cart_item['quantity'],
                 'name' => $product->get_name(),
                 'price' => $product->get_price(),
-                'total' => $cart_item['line_total'],
+                'total' => $cart_item['line_total'], // TODO does this exist?
                 'custom_data' => isset($cart_item['custom_data']) ? $cart_item['custom_data'] : null,
                 'custom_price' => isset($cart_item['custom_price']) ? $cart_item['custom_price'] : null,
             );
