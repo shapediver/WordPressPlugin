@@ -35,3 +35,51 @@ export interface IWordpressApi {
     addToCart(data: IWordpressAddToCartRequest): Promise<IWordpressAddToCartResponse>
 
 }
+
+/**
+ * Options for WordPressECommerceApiActions.
+ */
+export interface IWordPressECommerceApiActionsOptions {
+
+    /** 
+     * Id of the WooCommerce product to be used by default. 
+     */
+    productId: number
+
+    /** 
+     * Optional id of the ShapeDiver model state to start the configurator with. 
+     * If provided, this overrides the default model state id that might be defined by the product.
+     */
+    modelStateId?: string
+
+    /** Debug flag. */
+    debug?: boolean
+
+    /**
+     * Handler for closing the configurator modal / window.
+     */
+    closeConfiguratorHandler: () => Promise<boolean>
+}
+
+
+/**
+ * Options for creating a WordPress API.
+ */
+export interface IWordpressApiOptions {
+    /**
+     * Debug flag.
+     */
+	debug?: boolean
+
+    /**
+     * The URL of the WordPress API.
+     */
+    ajaxUrl: string
+}
+
+/**
+ * Options for WordPressConfiguratorLoader.
+ */
+export type IWordPressConfiguratorLoaderOptions = 
+    Partial<IWordpressApiOptions> &
+    Pick<IWordPressECommerceApiActionsOptions, "closeConfiguratorHandler">;
