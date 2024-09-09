@@ -6,6 +6,7 @@
   "scripts": {
     "wp:start": "docker-compose up -d",
     "wp:stop": "docker-compose stop",
+    "wp:restart": "docker-compose stop && docker-compose up -d",
     "wp": "docker-compose up",
     "wp:reset": "docker-compose down -v && docker-compose up -d",
     "wp:status": "docker-compose ps",

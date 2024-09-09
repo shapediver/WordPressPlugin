@@ -1,11 +1,23 @@
-import { CrossWindowApiFactory } from "./shared/modules/crosswindowapi/crosswindowapi";
-import { ICrossWindowApi } from "./shared/modules/crosswindowapi/types/crosswindowapi";
+import { IConfiguratorLoader } from "./modules/configuratormanager/types/loader";
+import { WordPressConfiguratorLoader } from "./modules/wordpressapi/loader";
 
-
+/** Id of the div representing the configurator modal. */
 const MODAL_ELEMENT_ID = 'configurator-modal';
+/** Id of the iframe hosting the configurator. */
 const IFRAME_ELEMENT_ID = 'configurator-iframe';
+/** Id of the button used to open the configurator (display the modal). */
 const OPEN_CONFIGURATOR_BUTTON_ID = 'open-configurator';
-const CROSSWINDOW_API_TIMEOUT = 10000;
+/** Selector for testing whether we are running inside the e-commerce system. */
+const ECOMMERCE_SELECTOR = 'div.wp-site-blocks';
+/** Selector for the element that defines the product id.  */
+const PRODUCT_ID_SELECTOR = 'button[name="add-to-cart"]';
+
+/** Number of key events for toggling configurator visibility. */
+const TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS = 3;
+/** Time window in milliseconds for toggling configurator visibility. */
+const TOGGLE_CONFIGURATOR_VISIBILITY_MSEC = 750;
+/** Key for toggling configurator visibility. */
+const TOGGLE_CONFIGURATOR_VISIBILITY_KEY = 'Escape';
 
 /**
  * The configurator manager.
@@ -13,39 +25,48 @@ const CROSSWINDOW_API_TIMEOUT = 10000;
 interface IConfiguratorManager {
 
 	/**
-	 * Open the configurator, which means: 
+	 * Load the configurator, based on a product id and optional model state id. 
 	 * 
-	 *   * Load the configurator for the product defined by the target 
-	 *     element of the event. 
-	 *   * Show the configurator to the end user.
+	 *   * If a target element is provided, try to use its data attributes to get  
+	 *     product id and model state id.
+	 *   * Otherwise, try to get the data from other elements in the DOM.
+	 *   * If a product id is found, load the configurator.
 	 * 
-	 * @param event 
+	 * Note: In case the configurator iframe is hidden, use setConfiguratorVisibility to show it. 
+	 * 
+	 * @param target 
 	 */
-	openConfiguratorEventHandler(event: MouseEvent): Promise<void>
+	loadConfigurator(target?: HTMLElement): Promise<void>
 
 	/**
-	 * Hide the configurator from the end user.
+	 * Set the visibility of the configurator.
 	 */
-	hideConfigurator(): void
+	setConfiguratorVisibility(visible: boolean): void
 
 	/**
-	 * Show the configurator to the end user.
+	 * The current visibility of the configurator.
 	 */
-	showConfigurator(): void
+	readonly isConfiguratorVisible: boolean
 
 	/**
 	 * Enable the configurator for the end user. 
 	 * This means that the user is shown a button to open the configurator.
 	 */
 	enableConfigurator(): void
+
+	/**
+	 * True if the code runs inside the eCommerce environment.
+	 */
+	readonly runsInsideECommerceSystem: boolean
 }
 
 class ConfiguratorManager implements IConfiguratorManager {
 
-	/**
-	 * Controls whether debug messages are shown in the console.
-	 */
+	runsInsideECommerceSystem: boolean;
+
 	private debug: boolean;
+
+	isConfiguratorVisible: boolean;
 
 	/**
 	 * The element containing the configurator iframe. 
@@ -56,43 +77,64 @@ class ConfiguratorManager implements IConfiguratorManager {
 	/**
 	 * The configurator iframe.
 	 */
-	iframe: HTMLIFrameElement;
+	private iframe: HTMLIFrameElement;
 
 	/**
-	 * TODO clarify
+	 * The configurator loader.
 	 */
-	//isIframeLoaded: boolean;
+	private configuratorLoader: IConfiguratorLoader;
 
-	/**
-	 * TODO clarify
-	 */
-	//isConfiguratorReady: boolean;
-	
-	private iframeApi: Promise<ICrossWindowApi>;
+	constructor() {
 
-	constructor(debug: boolean) {
-		this.debug = debug;
+		this.runsInsideECommerceSystem = document.querySelector(ECOMMERCE_SELECTOR) !== null;
+		this.debug = !this.runsInsideECommerceSystem;
+		if (!this.runsInsideECommerceSystem) {
+			this.log('🚫 Not running inside WordPress');
+		}
 
 		const modal = document.getElementById(MODAL_ELEMENT_ID);
 		if (!modal) {
-			throw new Error(`ConfiguratorManager: Element with id ${MODAL_ELEMENT_ID} not found.`);
+			const msg = `ConfiguratorManager: Element with id ${MODAL_ELEMENT_ID} not found.`;
+			this.log(msg);
+			throw new Error(msg);
 		}
 		this.modal = modal;
 
-
 		const iframe = document.getElementById(IFRAME_ELEMENT_ID) as HTMLIFrameElement | null;
 		if (!iframe) {
-			throw new Error(`ConfiguratorManager: iframe with id ${IFRAME_ELEMENT_ID} not found.`);
+			const msg = `ConfiguratorManager: iframe with id ${IFRAME_ELEMENT_ID} not found.`;
+			this.log(msg);
+			throw new Error(msg);
 		}
 		this.iframe = iframe;
 
-		if (!iframe.contentWindow) {
-			throw new Error(`ConfiguratorManager: contentWindow not set for the iframe?!`);
-		}
+		this.isConfiguratorVisible = this.modal.style.display !== 'none';
 
-		this.iframeApi = this.loadConfigurator(iframe, "http://localhost:3000");
-	
+		this.configuratorLoader = new WordPressConfiguratorLoader({
+			debug: this.debug,
+			ajaxUrl: (window as any).configuratorData?.ajaxurl,
+			closeConfiguratorHandler: () => {
+				this.setConfiguratorVisibility(false);
+				return Promise.resolve(true);
+			}
+		})
+
 		this.bindEvents();
+
+		// load and enable the configurator
+		if (document.querySelector(PRODUCT_ID_SELECTOR)) {
+			this.loadConfigurator()
+			.then(() => this.enableConfigurator());
+		}
+	}
+	
+	setConfiguratorVisibility(visible: boolean): void {
+		this.modal.style.display = visible ? "block" : "none";
+		this.isConfiguratorVisible = visible;
+		if (visible)
+			this.log('🖥️ Configurator modal visible');
+		else
+			this.log('🚪 Configurator modal hidden');
 	}
 	
 	log(...message: any[]): void {
@@ -101,58 +143,86 @@ class ConfiguratorManager implements IConfiguratorManager {
 	}
 
 	bindEvents() {
-		document.addEventListener('click', (event) => {
+
+		// add event handler for open configurator button
+		document.addEventListener('click', async (event) => {
 			const target = event.target as HTMLElement;
-			if (target.matches('#open-configurator, .open-configurator')) {
-				this.openConfiguratorEventHandler(event);
+			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}, .${OPEN_CONFIGURATOR_BUTTON_ID}`))
+				return;
+			event.preventDefault();
+			await this.loadConfigurator(target);
+			this.setConfiguratorVisibility(true);
+		});
+
+		// in local development mode, load a dummy configurator right away
+		if (!this.runsInsideECommerceSystem) {
+			setTimeout(async () => {
+				await this.configuratorLoader.load(this.iframe, {
+					productId: "",
+					modelStateId: "",
+					baseUrl: this.baseUrl,
+				});
+				this.setConfiguratorVisibility(true);
+			}, 1000);
+		}
+
+		// event handler for toggling configurator visibility
+		let toggleKeyPressCount = 0;
+		let timer : NodeJS.Timeout;
+		
+		document.addEventListener('keydown', (event) => {
+			if (event.key === TOGGLE_CONFIGURATOR_VISIBILITY_KEY) {
+				toggleKeyPressCount++;
+		
+				if (toggleKeyPressCount === 1) {
+					// Start the timer on the first key press
+					timer = setTimeout(() => {
+						// Reset the counter if the time window expires
+						toggleKeyPressCount = 0;
+					}, TOGGLE_CONFIGURATOR_VISIBILITY_MSEC);
+				}
+		
+				if (toggleKeyPressCount === TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS) {
+					// If the key is pressed X times within Y milliseconds
+					clearTimeout(timer); // Clear the timer to prevent reset
+					this.setConfiguratorVisibility(!this.isConfiguratorVisible); // Call the event handler
+					toggleKeyPressCount = 0; // Reset the counter after the event is handled
+				}
 			}
 		});
 
 		this.log('🎭 Events bound successfully');
 	}
 
-	openConfiguratorEventHandler(event: MouseEvent): Promise<void> {
-
-		event.preventDefault();
-		const target = event.target as HTMLElement;
-		const productId =
-			target.dataset.productId ||
-			(
-				document.querySelector(
-					'button[name="add-to-cart"]'
-				) as HTMLButtonElement
-			).value;
-		const modelStateId = target.dataset.modelStateId || '';
-
-		// TODO use loadConfigurator and showConfigurator
-		throw new Error("Method not implemented.");
+	get baseUrl(): string {
+		return (window as any).configuratorData?.settings?.configurator_url ?? 
+			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
 	}
 
-	loadConfigurator(iframe: HTMLIFrameElement, url: string): Promise<ICrossWindowApi> {
-		if (!iframe.contentWindow) {
-			throw new Error(`ConfiguratorManager: contentWindow not set for the iframe?!`);
+	async loadConfigurator(target?: HTMLElement): Promise<void> {
+	
+		let productId = target?.dataset.productId;
+		if (!productId) {
+			const element = document.querySelector(PRODUCT_ID_SELECTOR);
+			if (element)
+				productId = (element as HTMLButtonElement).value;
+		}
+		if (!productId) {
+			this.log('❌ Product id not found');
+			return Promise.resolve();
 		}
 
-		return new Promise((resolve, reject) => {
-			iframe.onload = async () => {
-				this.log('iframe loaded:', iframe);
-				const api = await CrossWindowApiFactory.getWindowApi(iframe.contentWindow!, 'plugin', 'app', CROSSWINDOW_API_TIMEOUT);
-				this.log('iframe API created:', api);
-				resolve(api);
-			};
-			iframe.src = url;
-			this.log('🔗 Setting iframe src:', url);
+		const modelStateId = target?.dataset.modelStateId;
+
+		this.log(`🔓 Opening configurator for productId ${productId} modelStateId ${modelStateId}`);
+
+		await this.configuratorLoader.load(this.iframe, {
+			productId,
+			modelStateId,
+			baseUrl: this.baseUrl,
 		});
-	}
 
-	hideConfigurator(): void {
-		this.modal.style.display = 'none';
-		this.log('🚪 Configurator modal hidden');
-	}
-
-	showConfigurator(): void {
-		this.modal.style.display = 'block';
-		this.log('🖥️ Configurator modal displayed');
+		return Promise.resolve();
 	}
 
 	enableConfigurator(): void {
@@ -172,4 +242,6 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 }
 
-const configuratorManager = new ConfiguratorManager(true);
+const configuratorManager = new ConfiguratorManager();
+
+(globalThis as { [key: string]: any }).configuratorManager = configuratorManager;

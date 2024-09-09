@@ -4,9 +4,21 @@
  * @see https://developer.wordpress.org/reference/classes/wp_user/
  */
 export interface IWordpressGetUserProfileResponse {
-    ID: number
+    /** 
+     * Wordpress user ID. 
+     * TODO clarify the value of this field for anonymous users.
+     */
+    id: number
+    /**
+     * User email.
+     * TODO clarify the value of this field for anonymous users.
+     */
     email: string
-    display_name: string
+    /**
+     * Name of the user.
+     * TODO clarify the value of this field for anonymous users.
+     */
+    name: string
 }
 
 /**
@@ -14,14 +26,23 @@ export interface IWordpressGetUserProfileResponse {
  * @see https://woocommerce.github.io/code-reference/classes/WC-Product.html
  */
 export interface IWordpressGetProductDataResponse {
+    /** WooCommerce product id */
     id: number
     name: string
     price: string
+    embedding_ticket?: string
     model_view_url?: string
-    shapediver_ticket?: string
-    configurator_url?: string
+    slug?: string
     model_state_id?: string
-
+    /**
+     * Optional URL (relative or absolute) to a configurator.
+     * Overrides the default configurator URL.
+     */
+    configurator_url?: string,
+    /**
+     * Optional URL (relative or absolute) to a settings JSON file.
+     */
+    settings_url?: string,
 }
 
 /**

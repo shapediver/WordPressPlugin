@@ -20,6 +20,8 @@ services:
       - '8443:8443'
     volumes:
       - 'wordpress_data:/bitnami/wordpress'
+      # Do not mount the plugin when setting up the container for the first time,
+      # because it will cause the WordPress setup to fail. 
       - ./dist:/bitnami/wordpress/wp-content/plugins/shapediver-wordpress-plugin
     depends_on:
       - mariadb
