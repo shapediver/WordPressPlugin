@@ -63,3 +63,6 @@ This project is licensed under the MIT license.
 ## Author
 
 ShapeDiver GmbH
+
+TODO 
+eslint
