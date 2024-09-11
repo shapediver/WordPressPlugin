@@ -141,9 +141,20 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 
     async addItemToCart(data: IAddItemToCartData): Promise<IAddItemToCartReply> {
         
+        let product_id: number = this.options.productId;
+        if (data.productId) {
+            try {
+                product_id = parseInt(data.productId);
+            }
+            catch (e) {
+                throw new Error(`Could not parse productId "${data.productId}" to an integer: ${e}`);
+            }
+        }
+
         // map request
         const request: IWordpressAddToCartRequest = {
-            product_id: this.options.productId,
+            product_id,
+            quantity: data.quantity,
             custom_price: data.price,
             custom_data: {
                 model_state_id: data.modelStateId,
