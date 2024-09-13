@@ -1,3 +1,4 @@
+import { IECommerceApiConnector } from "shared/modules/ecommerce/types/ecommerceapi"
 
 /**
  * Options for loading a configurator.
@@ -35,7 +36,7 @@ export interface IConfiguratorLoader {
      * @param iframe 
      * @param options 
      */
-    load(iframe: HTMLIFrameElement, options: IConfiguratorLoaderOptions): Promise<unknown>
+    load(iframe: HTMLIFrameElement, options: IConfiguratorLoaderOptions): Promise<IECommerceApiConnector | undefined>
 
 }
 

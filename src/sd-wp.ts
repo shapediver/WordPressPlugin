@@ -1,3 +1,4 @@
+import { IECommerceApiConnector } from "shared/modules/ecommerce/types/ecommerceapi";
 import { IConfiguratorLoader } from "./modules/configuratormanager/types/loader";
 import { WordPressConfiguratorLoader } from "./modules/wordpressapi/loader";
 
@@ -36,7 +37,7 @@ interface IConfiguratorManager {
 	 * 
 	 * @param target 
 	 */
-	loadConfigurator(target?: HTMLElement): Promise<void>
+	loadConfigurator(target?: HTMLElement): Promise<IECommerceApiConnector | undefined>
 
 	/**
 	 * Set the visibility of the configurator.
@@ -124,7 +125,10 @@ class ConfiguratorManager implements IConfiguratorManager {
 		// load and enable the configurator
 		if (document.querySelector(PRODUCT_ID_SELECTOR)) {
 			this.loadConfigurator()
-			.then(() => this.enableConfigurator());
+			.then((apiConnector) => {
+				(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
+				this.enableConfigurator();
+			});
 		}
 	}
 	
@@ -150,7 +154,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}, .${OPEN_CONFIGURATOR_BUTTON_ID}`))
 				return;
 			event.preventDefault();
-			await this.loadConfigurator(target);
+			const apiConnector = await this.loadConfigurator(target);
+			(globalThis as { [key: string]: any }).ecommerceApi = apiConnector
 			this.setConfiguratorVisibility(true);
 		});
 
@@ -199,7 +204,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
 	}
 
-	async loadConfigurator(target?: HTMLElement): Promise<void> {
+	async loadConfigurator(target?: HTMLElement): Promise<IECommerceApiConnector | undefined> {
 	
 		let productId = target?.dataset.productId;
 		if (!productId) {
@@ -209,20 +214,20 @@ class ConfiguratorManager implements IConfiguratorManager {
 		}
 		if (!productId) {
 			this.log('❌ Product id not found');
-			return Promise.resolve();
+			return Promise.resolve(undefined);
 		}
 
 		const modelStateId = target?.dataset.modelStateId;
 
 		this.log(`🔓 Opening configurator for productId ${productId} modelStateId ${modelStateId}`);
 
-		await this.configuratorLoader.load(this.iframe, {
+		const apiConnector = await this.configuratorLoader.load(this.iframe, {
 			productId,
 			modelStateId,
 			baseUrl: this.baseUrl,
 		});
 
-		return Promise.resolve();
+		return Promise.resolve(apiConnector);
 	}
 
 	enableConfigurator(): void {

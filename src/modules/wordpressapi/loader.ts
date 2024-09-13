@@ -9,6 +9,7 @@ import {
 	ECommerceApiFactory,
 } from "../../shared/modules/ecommerce/ecommerceapi";
 import { WordpressApi, WordPressECommerceApiActions } from "./api";
+import { IECommerceApiConnector } from "../../shared/modules/ecommerce/types/ecommerceapi";
 
 const CROSSWINDOW_API_TIMEOUT = 10000;
 
@@ -30,7 +31,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 			console.log(`WordPressConfiguratorLoader"):`, ...message);
 	}
     
-    async load(iframe: HTMLIFrameElement, options: IConfiguratorLoaderOptions): Promise<unknown> {
+    async load(iframe: HTMLIFrameElement, options: IConfiguratorLoaderOptions): Promise<IECommerceApiConnector | undefined> {
 
         // get product data, or use dummy data for local testing
         const productId = options.productId;
@@ -82,8 +83,13 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 				);
 
 				this.log('ecommerce API created:', api);
-				resolve(undefined);
+				resolve(api);
 			};
+            iframe.onerror = (message, source, lineno, colno, error) => {
+                const msg = `❌ Error loading configurator iframe: message = "${message}", source = "${source}", lineno = "${lineno}", colno = "${colno}", error = "${error}"`;
+                this.log(msg);
+                reject(new Error(msg));
+            };
 			iframe.src = url;
 			this.log('🔗 Setting iframe src:', url);
 		});
