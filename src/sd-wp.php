@@ -236,15 +236,16 @@ class ShapeDiverConfiguratorPlugin {
     // Add "View 3D Model" button after cart item
     public function add_button_after_cart_item($cart_item, $cart_item_key) {
         if (isset($cart_item['custom_data'])) {
-            echo '<button class="button alt" data-model-state-id="' . esc_attr($cart_item['custom_data']['model_state_id']) . '">View 3D Model</button>';
+            echo '<button class="button alt open-configurator" data-model-state-id="' . esc_attr($cart_item['custom_data']['model_state_id']) . '">View 3D Model</button>';
         }
     }
 
     // Add "View 3D Model" button after order item
     public function add_button_after_order_item($item_id, $item, $order) {
+        $product_id = $item->get_product_id();
         $model_state_id = wc_get_order_item_meta($item_id, 'model_state_id', true);
         if ($model_state_id) {
-            echo '<button class="button alt" data-model-state-id="' . esc_attr($model_state_id) . '">View 3D Model</button>';
+            echo '<button class="button alt open-configurator" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">View 3D Model</button>';
         }
     }
 
