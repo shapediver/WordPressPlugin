@@ -340,7 +340,7 @@ class ShapeDiverConfiguratorPlugin {
             'name' => $product->get_name(),
             'price' => $product->get_price(),
             'model_view_url' => get_post_meta($product_id, '_model_view_url', true),
-            'ticket' => get_post_meta($product_id, '_embedding_ticket', true),
+            'embedding_ticket' => get_post_meta($product_id, '_embedding_ticket', true),
             'configurator_url' => get_post_meta($product_id, '_configurator_url', true),
             'model_state_id' => get_post_meta($product_id, '_model_state_id', true),
             'slug' => get_post_meta($product_id, '_slug', true),
