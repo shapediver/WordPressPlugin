@@ -64,7 +64,7 @@ This project is licensed under the MIT license.
 
 ShapeDiver GmbH
 
-TODO 
+TODO
 eslint
 "customize" button feedback in case of configurator not connecting
 development mode - possibility to save model state to product

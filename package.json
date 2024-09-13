@@ -12,6 +12,7 @@
     "wp:status": "docker-compose ps",
     "build": "tsc && vite build && ./build.sh",
     "start": "vite",
+    "prettier": "prettier --write .",
     "optimize": "tsc && vite optimize --force && ./build.sh"
   },
   "author": "ShapeDiver GmbH",
