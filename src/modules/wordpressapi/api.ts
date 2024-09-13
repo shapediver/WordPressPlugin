@@ -44,7 +44,7 @@ export class WordpressApi implements IWordpressApi {
             if (typeof value === 'object' && value !== null) {
                 _request[key] = JSON.stringify(value);
             }
-            else {
+            else if (value !== undefined) {
                 _request[key] = value;
             }
         }
