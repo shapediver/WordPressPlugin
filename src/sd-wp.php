@@ -149,14 +149,6 @@ class ShapeDiverConfiguratorPlugin {
         add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
         
         add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
-    } 
-
-    public function custom_checkout_item_name($product_name, $cart_item) {
-        // Check the product ID or other criteria to target specific products
-        $product_id = $cart_item['product_id'];
-        $product_name = 'New Custom Name'; // Change the name
-        
-        return $product_name;
     }
     
     // AJAX handler to add product to cart 
