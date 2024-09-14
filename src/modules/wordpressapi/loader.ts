@@ -33,7 +33,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
     
     async load(iframe: HTMLIFrameElement, options: IConfiguratorLoaderOptions): Promise<IECommerceApiConnector | undefined> {
 
-        console.log('🚀 loading configurator', options);
+        this.log('🚀 loading configurator', options);
         // get product data, or use dummy data for local testing
         const productId = options.productId;
         const productData = this.wordpressApi

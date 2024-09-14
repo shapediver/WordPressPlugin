@@ -67,6 +67,14 @@ class ShapeDiverConfiguratorPlugin {
     // Register plugin settings
     public function register_settings() {
         register_setting('shapediver_configurator_settings', 'shapediver_configurator_url');
+        register_setting('shapediver_configurator_settings', 'debug_flag', array(
+            'sanitize_callback' => array($this, 'sanitize_checkbox'),
+        ));
+    }
+
+    // Sanitize function for checkbox (return 1 if checked, 0 if not)
+    function sanitize_checkbox($input) {
+        return $input ? 1 : 0;
     }
 
     // Render settings page in WordPress admin
@@ -83,7 +91,16 @@ class ShapeDiverConfiguratorPlugin {
                 <table class="form-table">
                     <tr valign="top">
                         <th scope="row">Default configurator URL (can be overridden for each product)</th>
-                        <td><input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', $shapediver_app_builder_url)); ?>" /></td>
+                        <td>
+                            <input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', $shapediver_app_builder_url)); ?>" />
+                        </td>
+                    </tr>
+                        <tr valign="top">
+                            <th scope="row">Debug flag</th>
+                        <td>
+                            <input type="checkbox" name="debug_flag" value="1" <?php checked("1", get_option('debug_flag', false)); ?> />
+                            <label for="debug_flag">Check to enable debug messages in the browser console</label>
+                        </td>
                     </tr>
                 </table>
                 <?php submit_button(); ?>
@@ -444,6 +461,7 @@ class ShapeDiverConfiguratorPlugin {
 
         return array(
             'configurator_url' => get_option('shapediver_configurator_url', $shapediver_app_builder_url),
+            'debug_flag' => get_option('debug_flag', false),
         );
     }
 }
