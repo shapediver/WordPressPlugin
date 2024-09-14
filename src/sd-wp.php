@@ -14,6 +14,11 @@
 // Exit if accessed directly
 if (!defined('ABSPATH')) exit;
 
+// Global variable for shapediver button
+$shapediver_button_classes = 'button alt wp-element-button single_add_to_cart_button';
+$shapediver_button_id = 'open-configurator';
+$shapediver_app_builder_url = 'https://appbuilder.shapediver.com/v1/main/latest/';
+
 class ShapeDiverConfiguratorPlugin {
     public function __construct() {
         // Initialize plugin
@@ -27,6 +32,7 @@ class ShapeDiverConfiguratorPlugin {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // WooCommerce product page modifications
+ 
         add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
@@ -65,6 +71,7 @@ class ShapeDiverConfiguratorPlugin {
 
     // Render settings page in WordPress admin
     public function settings_page() {
+        global $shapediver_app_builder_url;
         ?>
         <div class="wrap">
             <h1>ShapeDiver Configurator Settings</h1>
@@ -76,7 +83,7 @@ class ShapeDiverConfiguratorPlugin {
                 <table class="form-table">
                     <tr valign="top">
                         <th scope="row">Default configurator URL (can be overridden for each product)</th>
-                        <td><input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', 'https://appbuilder.shapediver.com/v1/main/latest/')); ?>" /></td>
+                        <td><input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', $shapediver_app_builder_url)); ?>" /></td>
                     </tr>
                 </table>
                 <?php submit_button(); ?>
@@ -86,33 +93,32 @@ class ShapeDiverConfiguratorPlugin {
     }
 
     // Enqueue necessary scripts and styles
-    public function enqueue_scripts() {
-        if (is_product() || is_cart() || is_wc_endpoint_url('view-order')) {
-            wp_enqueue_style('configurator-style', plugin_dir_url(__FILE__) . 'sd-wp.css', array(), '1.0');
-            wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array(), '1.0', true);
-            wp_localize_script('configurator-script', 'configuratorData', array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'settings' => $this->get_configurator_settings()
-            ));
-        }
+    public function enqueue_scripts() {  
+        wp_enqueue_style('configurator-style', plugin_dir_url(__FILE__) . 'sd-wp.css', array(), '1.0');
+        wp_enqueue_script('configurator-script', plugin_dir_url(__FILE__) . 'sd-wp.js', array(), '1.0', true);
+        wp_localize_script('configurator-script', 'configuratorData', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'settings' => $this->get_configurator_settings()
+        ));
     }
 
     // Add "Customize" button to product page
     public function add_configurator_button() {
-        echo '<button id="open-configurator" class="button alt wp-element-button single_add_to_cart_button" disabled>Customize</button>';
+        global $product, $shapediver_button_classes, $shapediver_button_id;
+        if ($product) {
+            $product_id = $product->get_id();
+            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-product-id="' . esc_attr($product_id) . '">Customize</button>';
+        }
     }
-
     // Add modal for configurator iframe
     public function add_configurator_modal() {
-        if (is_product() || is_cart() || is_wc_endpoint_url('view-order')) {
-            ?>
-            <div id="configurator-modal" class="modal" style="display: none;">
-                <div class="modal-content">
-                    <iframe id="configurator-iframe" src="" frameborder="0"></iframe>
-                </div>
+        ?>
+        <div id="configurator-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <iframe id="configurator-iframe" src="" frameborder="0" allowfullscreen></iframe>
             </div>
-            <?php
-        }
+        </div>
+        <?php
     }
 
     // Register AJAX handlers
@@ -135,23 +141,48 @@ class ShapeDiverConfiguratorPlugin {
         add_filter('woocommerce_add_cart_item', array($this, 'add_custom_price_to_cart_item'), 10, 2);
         add_filter('woocommerce_get_cart_item_from_session', array($this, 'get_cart_item_from_session'), 10, 2);
         add_filter('woocommerce_add_cart_item_data', array($this, 'add_custom_data_to_cart_item'), 10, 3);
-        add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
     }
 
     // Display custom data in cart and order
     private function display_custom_data() {
         add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
-        add_action('woocommerce_after_cart_item_name', array($this, 'add_button_after_cart_item'), 10, 2);
         add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
-    }
+        
+        add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
+    } 
 
-    // AJAX handler to add product to cart
+    // TODO clarify the use of this function
+    public function custom_checkout_item_name($product_name, $cart_item) {
+        // Check the product ID or other criteria to target specific products
+        $product_id = $cart_item['product_id'];
+        $product_name = 'New Custom Name'; // Change the name
+        
+        return $product_name;
+    }
+    
+    // AJAX handler to add product to cart 
     public function add_to_cart() {
         $product_id = isset($_POST['product_id']) ? intval($_POST['product_id']) : 0;
+        // Validate product
+        $product = wc_get_product($product_id);
+        if (!$product || !$product->is_purchasable()) {
+            wp_send_json_error(array('message' => 'Invalid or non-purchasable product'));
+            wp_die();
+        }
+
         $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
         $variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
-        $custom_data = isset($_POST['custom_data']) ? json_decode(stripslashes($_POST['custom_data']), true) : array();
+        $custom_data_raw = isset($_POST['custom_data']) ? wp_unslash($_POST['custom_data']) : '';
+        $custom_data = json_decode($custom_data_raw, true);
         $custom_price = isset($_POST['custom_price']) ? floatval($_POST['custom_price']) : 0;
+        
+        if ($custom_price < 0) {
+            wp_send_json_error(array('message' => 'Invalid price'));
+            wp_die();
+        }
+
+        // Sanitize custom data
+        $custom_data = array_map('sanitize_text_field', $custom_data);
 
         $cart_item_data = array(
             'custom_data' => $custom_data,
@@ -216,17 +247,34 @@ class ShapeDiverConfiguratorPlugin {
             $cart_item['custom_price'] = $values['custom_price'];
             $cart_item = $this->add_custom_price_to_cart_item($cart_item, '');
         }
+        if (isset($values['custom_data'])) {
+            $cart_item['custom_data'] = $values['custom_data'];
+        }
+        if (isset($values['model_state_id'])) {
+            $cart_item['model_state_id'] = $values['model_state_id'];
+        }
         return $cart_item;
     }
-
+    
     // Display custom data in cart
     public function display_custom_data_in_cart($item_data, $cart_item) {
         if (isset($cart_item['custom_data'])) {
+            $existing_keys = array_column($item_data, 'key');
             foreach ($cart_item['custom_data'] as $key => $value) {
-                $item_data[] = array(
-                    'key' => ucfirst($key),
-                    'value' => (is_array($value) ? json_encode($value) : $value)
-                );
+                $display_key = $key;
+                if ($key === 'model_state_id') {
+                    $display_key = 'ID';
+                } else {
+                    $display_key = str_replace('_', ' ', $display_key);
+                }
+                $display_key = ucfirst($display_key);
+                if (!in_array($display_key, $existing_keys)) {
+                    $item_data[] = array(
+                        'key' => esc_html($display_key),
+                        'value' => esc_html(is_array($value) ? json_encode($value) : $value)
+                    );
+                    $existing_keys[] = $display_key;
+                }
             }
         }
         
@@ -234,30 +282,53 @@ class ShapeDiverConfiguratorPlugin {
     }
 
     // Add "View 3D Model" button after cart item
-    public function add_button_after_cart_item($cart_item, $cart_item_key) {
-        if (isset($cart_item['custom_data'])) {
-            echo '<button class="button alt open-configurator" data-model-state-id="' . esc_attr($cart_item['custom_data']['model_state_id']) . '">View 3D Model</button>';
-        }
+    public function add_button_to_cart_item($product_name, $cart_item, $cart_item_key) {
+        global $shapediver_button_classes, $shapediver_button_id;
+        $product_id = $cart_item['product_id'];
+        $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
+        
+        $button = '<br><button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">View 3D Model</button>';
+        
+        echo $product_name . $button;
     }
 
     // Add "View 3D Model" button after order item
     public function add_button_after_order_item($item_id, $item, $order) {
+        global $shapediver_button_classes, $shapediver_button_id;
+        if (!is_object($item) || !method_exists($item, 'get_product_id')) {
+            error_log('Invalid item object in add_button_after_order_item');
+            return;
+        }
+    
         $product_id = $item->get_product_id();
-        $model_state_id = wc_get_order_item_meta($item_id, 'model_state_id', true);
+        $model_state_id = $item->get_meta('model_state_id');
+        
         if ($model_state_id) {
-            echo '<button class="button alt open-configurator" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">View 3D Model</button>';
+            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">View 3D Model</button>';
+        } else {
+            error_log('No model_state_id found for order item: ' . $item_id);
         }
     }
 
     // Add custom data to cart item
     public function add_custom_data_to_cart_item($cart_item_data, $product_id, $variation_id) {
         if (isset($_POST['custom_data'])) {
-            $custom_data = json_decode(stripslashes($_POST['custom_data']), true);
+            $custom_data_raw = wp_unslash($_POST['custom_data']);
+            $custom_data = json_decode($custom_data_raw, true);
+    
+            // Sanitize custom data
+            $custom_data = array_map('sanitize_text_field', $custom_data);
+    
             $cart_item_data['custom_data'] = $custom_data;
-            
+    
+            // Add custom name to cart item data
+            if (isset($custom_data['custom_name'])) {
+                $cart_item_data['custom_data']['custom_name'] = sanitize_text_field($custom_data['custom_name']);
+            }
+    
             // Store model_state_id separately for easy access
             if (isset($custom_data['model_state_id'])) {
-                $cart_item_data['model_state_id'] = $custom_data['model_state_id'];
+                $cart_item_data['model_state_id'] = sanitize_text_field($custom_data['model_state_id']);
             }
         }
         return $cart_item_data;
@@ -267,11 +338,14 @@ class ShapeDiverConfiguratorPlugin {
     public function add_custom_data_to_order_items($item, $cart_item_key, $values, $order) {
         if (isset($values['custom_data'])) {
             foreach ($values['custom_data'] as $key => $value) {
-                $item->add_meta_data($key, $value);
+                $sanitized_key = sanitize_text_field($key);
+                $sanitized_value = is_array($value) ? array_map('sanitize_text_field', $value) : sanitize_text_field($value);
+                $item->add_meta_data($sanitized_key, $sanitized_value);
             }
-        }
-        if (isset($values['model_state_id'])) {
-            $item->add_meta_data('model_state_id', $values['model_state_id']);
+            // Add custom name as a separate meta
+            if (isset($values['custom_data']['custom_name'])) {
+                $item->add_meta_data('custom_name', sanitize_text_field($values['custom_data']['custom_name']));
+            }
         }
     }
 
@@ -338,17 +412,18 @@ class ShapeDiverConfiguratorPlugin {
         }
         $data = array(
             'id' => $product->get_id(),
-            'name' => $product->get_name(),
+            'name' => esc_html($product->get_name()),
             'price' => $product->get_price(),
-            'model_view_url' => get_post_meta($product_id, '_model_view_url', true),
-            'embedding_ticket' => get_post_meta($product_id, '_embedding_ticket', true),
-            'configurator_url' => get_post_meta($product_id, '_configurator_url', true),
-            'model_state_id' => get_post_meta($product_id, '_model_state_id', true),
-            'slug' => get_post_meta($product_id, '_slug', true),
-            'settings_url' => get_post_meta($product_id, '_settings_url', true),
+            'model_view_url' => esc_url(get_post_meta($product_id, '_model_view_url', true)),
+            'embedding_ticket' => sanitize_text_field(get_post_meta($product_id, '_embedding_ticket', true)),
+            'configurator_url' => esc_url(get_post_meta($product_id, '_configurator_url', true)),
+            'model_state_id' => sanitize_text_field(get_post_meta($product_id, '_model_state_id', true)),
+            'slug' => sanitize_text_field(get_post_meta($product_id, '_slug', true)),
+            'settings_url' => sanitize_text_field(get_post_meta($product_id, '_settings_url', true)),
         );
         wp_send_json_success($data);
     }
+    
 
     public function get_user_profile() {
         if (!is_user_logged_in()) {
@@ -357,15 +432,18 @@ class ShapeDiverConfiguratorPlugin {
         $user = wp_get_current_user();
         $data = array(
             'id' => $user->ID,
-            'name' => $user->display_name,
-            'email' => $user->user_email,
+            'name' => esc_html($user->display_name),
+            'email' => sanitize_email($user->user_email),
         );
         wp_send_json_success($data);
     }
     
+    // Get configurator settings
     private function get_configurator_settings() {
+        global $shapediver_app_builder_url;
+
         return array(
-            'configurator_url' => get_option('shapediver_configurator_url', 'https://appbuilder.shapediver.com/v1/main/latest/'),
+            'configurator_url' => get_option('shapediver_configurator_url', $shapediver_app_builder_url),
         );
     }
 }
