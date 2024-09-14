@@ -10,7 +10,11 @@ const IFRAME_ELEMENT_ID = 'configurator-iframe';
 const OPEN_CONFIGURATOR_BUTTON_ID = 'open-configurator';
 /** Selector for testing whether we are running inside the e-commerce system. */
 const ECOMMERCE_SELECTOR = 'div.wp-site-blocks';
-/** Selector for the element that defines the product id.  */
+/** 
+ * Selector for the element that defines the product id. 
+ * This is used to get the product id on product pages, 
+ * and load the configurator in the background. 
+ */
 const PRODUCT_ID_SELECTOR = 'button[name="add-to-cart"]';
 
 /** Number of key events for toggling configurator visibility. */
@@ -88,11 +92,11 @@ class ConfiguratorManager implements IConfiguratorManager {
 	constructor() {
 
 		this.runsInsideECommerceSystem = document.querySelector(ECOMMERCE_SELECTOR) !== null;
-		this.debug = !this.runsInsideECommerceSystem;
 		if (!this.runsInsideECommerceSystem) {
 			this.log('🚫 Not running inside WordPress');
 		}
-
+		this.debug = !this.runsInsideECommerceSystem || (window as any).configuratorData?.settings?.debug_flag === "1";
+	
 		const modal = document.getElementById(MODAL_ELEMENT_ID);
 		if (!modal) {
 			const msg = `ConfiguratorManager: Element with id ${MODAL_ELEMENT_ID} not found.`;
@@ -122,7 +126,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 		this.bindEvents();
 
-		// load and enable the configurator
+		// load and enable the configurator on product pages
 		if (document.querySelector(PRODUCT_ID_SELECTOR)) {
 			this.loadConfigurator()
 			.then((apiConnector) => {
