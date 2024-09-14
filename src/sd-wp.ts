@@ -145,17 +145,29 @@ class ConfiguratorManager implements IConfiguratorManager {
   }
 
   bindEvents() {
-    // add event handler for open configurator button
     document.addEventListener('click', async (event) => {
       const target = event.target as HTMLElement;
+
       if (
         !target.matches(
           `#${OPEN_CONFIGURATOR_BUTTON_ID}, .${OPEN_CONFIGURATOR_BUTTON_ID}`
         )
       )
         return;
+
       event.preventDefault();
-      const apiConnector = await this.loadConfigurator(target);
+
+      const productId = target.dataset.productId as string;
+      const modelStateId = target.dataset.modelStateId;
+
+      console.log('productId', productId);
+      console.log('modelStateId', modelStateId);
+
+      const apiConnector = await this.configuratorLoader.load(this.iframe, {
+        productId,
+        modelStateId,
+        baseUrl: this.baseUrl,
+      });
       (globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
       this.setConfiguratorVisibility(true);
     });

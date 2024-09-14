@@ -39,6 +39,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
     iframe: HTMLIFrameElement,
     options: IConfiguratorLoaderOptions
   ): Promise<IECommerceApiConnector | undefined> {
+    console.log('🚀 loading configurator', options);
     // get product data, or use dummy data for local testing
     const productId = options.productId;
     const productData = this.wordpressApi
@@ -55,7 +56,10 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 
     // build configurator url
     const baseUrl = productData.configurator_url ?? options.baseUrl;
-    const modelStateId = productData.model_state_id ?? options.modelStateId;
+    const modelStateId =
+      options.modelStateId ??
+      productData.model_state_id ??
+      options.modelStateId;
     const url = buildAppBuilderUrl({
       baseUrl,
       ticket: productData.embedding_ticket,
