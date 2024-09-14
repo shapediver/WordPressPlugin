@@ -107,7 +107,7 @@ class ShapeDiverConfiguratorPlugin {
         global $product, $shapediver_button_classes, $shapediver_button_id;
         if ($product) {
             $product_id = $product->get_id();
-            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-product-id="' . esc_attr($product_id) . '">Customize</button>';
+            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-product-id="' . esc_attr($product_id) . '" disabled>Customize</button>';
         }
     }
     // Add modal for configurator iframe
