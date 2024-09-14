@@ -204,7 +204,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 	}
 
 	get baseUrl(): string {
-		return (window as any).configuratorData?.settings?.configurator_url ?? 
+		const defaultBaseUrl = (window as any).configuratorData?.settings?.configurator_url;
+		return defaultBaseUrl ? defaultBaseUrl :
 			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
 	}
 
