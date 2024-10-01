@@ -24,6 +24,7 @@
     "vite-plugin-static-copy": "^1.0.6"
   },
   "dependencies": {
-    "post-robot": "^8.0.32"
+    "post-robot": "^8.0.32",
+    "zod": "^3.23.8"
   }
 }
