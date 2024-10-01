@@ -1,5 +1,11 @@
 import { IWordpressApi, IWordpressApiOptions, IWordPressECommerceApiActionsOptions } from "./types/api";
 import { IWordpressAddToCartRequest, IWordpressGetProductDataRequest, WordPressAjaxRequestType } from "./types/request";
+import {
+    IWordpressAddToCartResponseSchema,
+    IWordpressGetCartResponseSchema,
+    IWordpressGetProductDataResponseSchema,
+    IWordpressGetUserProfileResponseSchema,
+} from "./types/responsetypecheck";
 import { 
     IWordpressGetProductDataResponse, 
     IWordpressGetUserProfileResponse, 
@@ -94,20 +100,24 @@ export class WordpressApi implements IWordpressApi {
 			console.log(`WordpressApi (ajaxurl = "${this.ajaxurl}"):`, ...message);
 	}
 
-    getProductData(id: number): Promise<IWordpressGetProductDataResponse> {
-        return this.request<IWordpressGetProductDataRequest, IWordpressGetProductDataResponse>('POST', 'get_product_data', { product_id: id });
+    async getProductData(id: number): Promise<IWordpressGetProductDataResponse> {
+        const data = await this.request<IWordpressGetProductDataRequest, IWordpressGetProductDataResponse>('POST', 'get_product_data', { product_id: id });
+        return IWordpressGetProductDataResponseSchema.parse(data);
     }
 
-    getUserProfile(): Promise<IWordpressGetUserProfileResponse> {
-        return this.request<WordPressAjaxRequestType, IWordpressGetUserProfileResponse>('GET', 'get_user_profile', {});
+    async getUserProfile(): Promise<IWordpressGetUserProfileResponse> {
+        const data = await this.request<WordPressAjaxRequestType, IWordpressGetUserProfileResponse>('GET', 'get_user_profile', {});
+        return IWordpressGetUserProfileResponseSchema.parse(data);
     }
 
-    getCart(): Promise<IWordpressGetCartResponse> {
-        return this.request<WordPressAjaxRequestType, IWordpressGetCartResponse>('GET', 'get_cart', {});
+    async getCart(): Promise<IWordpressGetCartResponse> {
+        const data = await this.request<WordPressAjaxRequestType, IWordpressGetCartResponse>('GET', 'get_cart', {});
+        return IWordpressGetCartResponseSchema.parse(data);
     }
 
-    addToCart(data: IWordpressAddToCartRequest): Promise<IWordpressAddToCartResponse> {
-        return this.request<IWordpressAddToCartRequest, IWordpressAddToCartResponse>('POST', 'add_to_cart', data);
+    async addToCart(request: IWordpressAddToCartRequest): Promise<IWordpressAddToCartResponse> {
+        const data = await this.request<IWordpressAddToCartRequest, IWordpressAddToCartResponse>('POST', 'add_to_cart', request);
+        return IWordpressAddToCartResponseSchema.parse(data);
     }
     
 }
