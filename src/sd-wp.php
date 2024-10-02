@@ -5,8 +5,8 @@
  * Version: 1.0
  * Author: ShapeDiver GmbH
  * Author URI: https://www.shapediver.com
- * License: MIT
- * License URI: https://opensource.org/licenses/MIT
+ * License: GPLv2 or later
+ * License URI: https://opensource.org/license/gpl-2-0
  * Text Domain: shapediver-wordpress-plugin
  * WC requires at least: 3.0
  */
