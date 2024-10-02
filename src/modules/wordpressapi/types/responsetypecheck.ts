@@ -34,8 +34,8 @@ const IWordpressCartItemSchema = z.object({
 
 // Zod type definition for IWordpressCartTotals
 const IWordpressCartTotalsSchema = z.object({
-    subtotal: z.number(),
-    total: z.number(),
+    subtotal: z.string(),
+    total: z.string(),
 });
 
 // Zod type definition for IWordpressGetCartResponse
