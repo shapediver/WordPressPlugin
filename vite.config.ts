@@ -4,11 +4,14 @@ import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 const plugins = [
 	viteStaticCopy({
-		targets: [ {
+		targets: [{
 			src: 'src/sd-wp.css', // Specify the path to your CSS file
 			dest: '' // Leave blank or specify folder inside 'dist' if you want to copy into a subfolder
 		},  {
 			src: 'src/sd-wp.php',
+			dest: ''
+		},  {
+			src: 'LICENSE',
 			dest: ''
 		}]
 	})
