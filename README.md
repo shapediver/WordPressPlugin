@@ -82,6 +82,5 @@ ShapeDiver GmbH
 
 # TODO 
 
-  * eslint
   * Configurator button - feedback in case of configurator not connecting
   * development mode - possibility to save model state to product
