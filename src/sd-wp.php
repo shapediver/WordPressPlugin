@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: ShapeDiver WordPress Plugin
- * Description: A plugin to integrate the ShapeDiver 3D configurator into WooCommerce.
+ * Description: A plugin to integrate ShapeDiver 3D configurators into WooCommerce.
  * Version: 1.0
  * Author: ShapeDiver GmbH
  * Author URI: https://www.shapediver.com
@@ -15,9 +15,14 @@
 if (!defined('ABSPATH')) exit;
 
 // Global variable for shapediver button
-$shapediver_button_classes = 'button alt wp-element-button single_add_to_cart_button';
+$shapediver_product_button_classes = 'single_add_to_cart_button button alt wp-element-button shapediver-product-button';
+$shapediver_cart_item_button_classes = 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button';
+$shapediver_order_item_button_classes = 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button';
 $shapediver_button_id = 'open-configurator';
 $shapediver_app_builder_url = 'https://appbuilder.shapediver.com/v1/main/latest/';
+$shapediver_product_button_label = 'Customize'; // Default label for the configurator button on the product page
+$shapediver_cart_item_button_label = 'View 3D Model'; // Default label for the configurator button shown for cart items
+$shapediver_order_item_button_label = 'View 3D Model'; // Default label for the configurator button shown for order items
 
 class ShapeDiverConfiguratorPlugin {
     public function __construct() {
@@ -56,18 +61,21 @@ class ShapeDiverConfiguratorPlugin {
     // Add menu item to WordPress admin
     public function add_admin_menu() {
         add_options_page(
-            'ShapeDiver Configurator Settings',
-            'ShapeDiver Configurator',
+            'ShapeDiver Plugin Settings',
+            'ShapeDiver',
             'manage_options',
-            'shapediver-configurator',
+            'shapediver-settings',
             array($this, 'settings_page')
         );
     }
 
     // Register plugin settings
     public function register_settings() {
-        register_setting('shapediver_configurator_settings', 'shapediver_configurator_url');
-        register_setting('shapediver_configurator_settings', 'debug_flag', array(
+        register_setting('shapediver_plugin_settings', 'default_configurator_url');
+        register_setting('shapediver_plugin_settings', 'product_button_label');
+        register_setting('shapediver_plugin_settings', 'cart_item_button_label');
+        register_setting('shapediver_plugin_settings', 'order_item_button_label');
+        register_setting('shapediver_plugin_settings', 'debug_flag', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox'),
         ));
     }
@@ -79,24 +87,42 @@ class ShapeDiverConfiguratorPlugin {
 
     // Render settings page in WordPress admin
     public function settings_page() {
-        global $shapediver_app_builder_url;
+        global $shapediver_app_builder_url, $shapediver_product_button_label, $shapediver_cart_item_button_label, $shapediver_order_item_button_label;
         ?>
         <div class="wrap">
             <h1>ShapeDiver Configurator Settings</h1>
             <form method="post" action="options.php">
                 <?php
-                settings_fields('shapediver_configurator_settings');
-                do_settings_sections('shapediver_configurator_settings');
+                settings_fields('shapediver_plugin_settings');
+                do_settings_sections('shapediver_plugin_settings');
                 ?>
                 <table class="form-table">
                     <tr valign="top">
-                        <th scope="row">Default configurator URL (can be overridden for each product)</th>
+                        <th scope="row">Default configurator URL (this can be overridden for each product)</th>
                         <td>
-                            <input type="text" name="shapediver_configurator_url" value="<?php echo esc_attr(get_option('shapediver_configurator_url', $shapediver_app_builder_url)); ?>" />
+                            <input type="text" name="default_configurator_url" value="<?php echo esc_attr(get_option('default_configurator_url', $shapediver_app_builder_url)); ?>" />
                         </td>
                     </tr>
-                        <tr valign="top">
-                            <th scope="row">Debug flag</th>
+                    <tr valign="top">
+                        <th scope="row">Label of the configurator button on the product page</th>
+                        <td>
+                            <input type="text" name="product_button_label" value="<?php echo esc_attr(get_option('product_button_label', $shapediver_product_button_label)); ?>" />
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Label of the configurator button shown for cart items</th>
+                        <td>
+                            <input type="text" name="cart_item_button_label" value="<?php echo esc_attr(get_option('cart_item_button_label', $shapediver_cart_item_button_label)); ?>" />
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Label of the configurator button shown for order items</th>
+                        <td>
+                            <input type="text" name="order_item_button_label" value="<?php echo esc_attr(get_option('order_item_button_label', $shapediver_order_item_button_label)); ?>" />
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Debug flag</th>
                         <td>
                             <input type="checkbox" name="debug_flag" value="1" <?php checked("1", get_option('debug_flag', false)); ?> />
                             <label for="debug_flag">Check to enable debug messages in the browser console</label>
@@ -121,10 +147,10 @@ class ShapeDiverConfiguratorPlugin {
 
     // Add "Customize" button to product page
     public function add_configurator_button() {
-        global $product, $shapediver_button_classes, $shapediver_button_id;
+        global $product, $shapediver_product_button_classes, $shapediver_button_id, $shapediver_product_button_label;
         if ($product) {
             $product_id = $product->get_id();
-            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-product-id="' . esc_attr($product_id) . '" disabled>Customize</button>';
+            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_product_button_classes) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . get_option('product_button_label', $shapediver_product_button_label) . '</button>';
         }
     }
     // Add modal for configurator iframe
@@ -291,18 +317,18 @@ class ShapeDiverConfiguratorPlugin {
 
     // Add "View 3D Model" button after cart item
     public function add_button_to_cart_item($product_name, $cart_item, $cart_item_key) {
-        global $shapediver_button_classes, $shapediver_button_id;
+        global $shapediver_cart_item_button_classes, $shapediver_button_id, $shapediver_cart_item_button_label;
         $product_id = $cart_item['product_id'];
         $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
         
-        $button = '<br><button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">View 3D Model</button>';
+        $button = '<br><button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_cart_item_button_classes) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('cart_item_button_label', $shapediver_cart_item_button_label) . '</button>';
         
         echo $product_name . $button;
     }
 
     // Add "View 3D Model" button after order item
     public function add_button_after_order_item($item_id, $item, $order) {
-        global $shapediver_button_classes, $shapediver_button_id;
+        global $shapediver_order_item_button_classes, $shapediver_button_id, $shapediver_order_item_button_label;
         if (!is_object($item) || !method_exists($item, 'get_product_id')) {
             error_log('Invalid item object in add_button_after_order_item');
             return;
@@ -312,7 +338,7 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = $item->get_meta('model_state_id');
         
         if ($model_state_id) {
-            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_button_classes) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">View 3D Model</button>';
+            echo '<button id="' . esc_attr($shapediver_button_id) . '" class="' . esc_attr($shapediver_order_item_button_classes) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('order_item_button_label', $shapediver_order_item_button_label) . '</button>';
         } else {
             error_log('No model_state_id found for order item: ' . $item_id);
         }
@@ -365,7 +391,7 @@ class ShapeDiverConfiguratorPlugin {
             'id' => '_slug',
             'label' => __('Slug', 'woocommerce'),
             'desc_tip' => 'true',
-            'description' => __('Enter the slug of your ShapeDiver model. You can leave this empty if you provide ticket and model view URL.', 'woocommerce')
+            'description' => __('Enter the slug of your ShapeDiver model. The slug is the last part of the URL of your model. You can leave this empty if you provide ticket and model view URL.', 'woocommerce')
         ));
         woocommerce_wp_text_input(array(
             'id' => '_embedding_ticket',
@@ -383,13 +409,13 @@ class ShapeDiverConfiguratorPlugin {
             'id' => '_model_state_id',
             'label' => __('Model State ID', 'woocommerce'),
             'desc_tip' => 'true',
-            'description' => __('Enter the model state ID of your ShapeDiver model. If left empty, the model\'s default state will be used.', 'woocommerce')
+            'description' => __('Optional. Enter a model state ID of your ShapeDiver model. If left empty, the model\'s default state will be used.', 'woocommerce')
         ));
         woocommerce_wp_text_input(array(
             'id' => '_configurator_url',
             'label' => __('Configurator URL', 'woocommerce'),
             'desc_tip' => 'true',
-            'description' => __('Enter the configurator URL for this product. If left empty, ShapeDiver App Builder will be used.', 'woocommerce')
+            'description' => __('Optional. Enter the configurator URL for this product. If left empty, ShapeDiver App Builder will be used.', 'woocommerce')
         ));
         woocommerce_wp_text_input(array(
             'id' => '_settings_url',
@@ -451,7 +477,7 @@ class ShapeDiverConfiguratorPlugin {
         global $shapediver_app_builder_url;
 
         return array(
-            'configurator_url' => get_option('shapediver_configurator_url', $shapediver_app_builder_url),
+            'configurator_url' => get_option('default_configurator_url', $shapediver_app_builder_url),
             'debug_flag' => get_option('debug_flag', false),
         );
     }
