@@ -97,12 +97,12 @@ export interface IWordpressCartTotals {
      * Cart sub total (after calculation).
      * @see https://woocommerce.github.io/code-reference/classes/WC-Cart.html#method_get_subtotal
      */
-    subtotal: number
+    subtotal: string
     /**
      * Cart total after calculation.
      * @see https://woocommerce.github.io/code-reference/classes/WC-Cart.html#method_get_total
      */
-    total: number
+    total: string
 }
 
 /**

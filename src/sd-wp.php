@@ -254,8 +254,8 @@ class ShapeDiverConfiguratorPlugin {
                 'product_id' => $cart_item['product_id'],
                 'variation_id' => $cart_item['variation_id'],
                 'quantity' => $cart_item['quantity'],
-                'name' => $product->get_name(),
-                'price' => $product->get_price(),
+                'product_name' => $product->get_name(),
+                'product_price' => $product->get_price(),
                 'total' => $cart_item['line_total'], // TODO does this exist?
                 'custom_data' => isset($cart_item['custom_data']) ? $cart_item['custom_data'] : null,
                 'custom_price' => isset($cart_item['custom_price']) ? $cart_item['custom_price'] : null,

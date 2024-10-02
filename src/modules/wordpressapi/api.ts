@@ -81,13 +81,13 @@ export class WordpressApi implements IWordpressApi {
         const ajaxResponse = await response.json() as IWordPressAjaxResponse<Tresponse>;
 
         if (!ajaxResponse.success) {
-            const msg = `WordpressApiError: ${ajaxResponse}`;
+            const msg = `WordpressApiError: ${JSON.stringify(ajaxResponse, null, 0)}`;
             this.log(msg);
             throw new Error(msg);
         }
 
         if (!ajaxResponse.data) {
-            const msg = `WordpressApiError: No data: ${ajaxResponse}`;
+            const msg = `WordpressApiError: No data: ${JSON.stringify(ajaxResponse, null, 0)}`;
             this.log(msg);
             throw new Error(msg);
         }
@@ -106,12 +106,12 @@ export class WordpressApi implements IWordpressApi {
     }
 
     async getUserProfile(): Promise<IWordpressGetUserProfileResponse> {
-        const data = await this.request<WordPressAjaxRequestType, IWordpressGetUserProfileResponse>('GET', 'get_user_profile', {});
+        const data = await this.request<WordPressAjaxRequestType, IWordpressGetUserProfileResponse>('POST', 'get_user_profile', {});
         return IWordpressGetUserProfileResponseSchema.parse(data);
     }
 
     async getCart(): Promise<IWordpressGetCartResponse> {
-        const data = await this.request<WordPressAjaxRequestType, IWordpressGetCartResponse>('GET', 'get_cart', {});
+        const data = await this.request<WordPressAjaxRequestType, IWordpressGetCartResponse>('POST', 'get_cart', {});
         return IWordpressGetCartResponseSchema.parse(data);
     }
 
