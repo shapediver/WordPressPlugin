@@ -31,6 +31,12 @@ The ShapeDiver WordPress Plugin is designed to enhance WordPress and WooCommerce
 7. Uncomment the line in `docker-compose.yml` that mounts the plugin
 8. Restart the container: `pnpm run wp:restart`
 
+In general, whenever you want to refresh the container using local code changes, 
+carry out the following steps: 
+
+1. Build the plugin: `pnpm run build`
+2. Restart the container: `pnpm run wp:restart`
+
 ### Development Commands
 
 The following scripts are available for development:
