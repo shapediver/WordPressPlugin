@@ -1,18 +1,18 @@
 import { defineConfig } from "vite";
-import { resolve } from "path"
-import { viteStaticCopy } from 'vite-plugin-static-copy'
+import { resolve } from "path";
+import { viteStaticCopy } from "vite-plugin-static-copy";
 
 const plugins = [
 	viteStaticCopy({
 		targets: [{
-			src: 'src/sd-wp.css', // Specify the path to your CSS file
-			dest: '' // Leave blank or specify folder inside 'dist' if you want to copy into a subfolder
+			src: "src/sd-wp.css", // Specify the path to your CSS file
+			dest: "" // Leave blank or specify folder inside 'dist' if you want to copy into a subfolder
 		},  {
-			src: 'src/sd-wp.php',
-			dest: ''
+			src: "src/sd-wp.php",
+			dest: ""
 		},  {
-			src: 'LICENSE',
-			dest: ''
+			src: "LICENSE",
+			dest: ""
 		}]
 	})
 ];
@@ -31,9 +31,9 @@ export default defineConfig({
 			},
 			output: {
 				// Specifies the format of the output, e.g., 'es', 'cjs', or 'iife'.
-				format: 'iife', // or 'iife' if you want a self-executing bundle
+				format: "iife", // or 'iife' if you want a self-executing bundle
 				// Specifies the entry point file.
-				entryFileNames: 'sd-wp.js', // Your custom filename here
+				entryFileNames: "sd-wp.js", // Your custom filename here
 				// Ensures all output is bundled into a single file
 				manualChunks: undefined, // Disable code-splitting to bundle everything in one file
 			}

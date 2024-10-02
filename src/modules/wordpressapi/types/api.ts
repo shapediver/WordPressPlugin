@@ -1,9 +1,9 @@
 import { IWordpressAddToCartRequest } from "./request";
 import { 
-    IWordpressAddToCartResponse, 
-    IWordpressGetCartResponse, 
-    IWordpressGetProductDataResponse, 
-    IWordpressGetUserProfileResponse 
+	IWordpressAddToCartResponse, 
+	IWordpressGetCartResponse, 
+	IWordpressGetProductDataResponse, 
+	IWordpressGetUserProfileResponse 
 } from "./response";
 
 /**

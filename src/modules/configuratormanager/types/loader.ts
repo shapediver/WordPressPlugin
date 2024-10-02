@@ -1,4 +1,4 @@
-import { IECommerceApiConnector } from "shared/modules/ecommerce/types/ecommerceapi"
+import { IECommerceApiConnector } from "shared/modules/ecommerce/types/ecommerceapi";
 
 /**
  * Options for loading a configurator.

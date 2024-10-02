@@ -12,13 +12,20 @@
     "wp:status": "docker-compose ps",
     "build": "tsc && vite build && ./build.sh",
     "start": "vite",
-    "optimize": "tsc && vite optimize --force && ./build.sh"
+    "optimize": "tsc && vite optimize --force && ./build.sh",
+    "eslint": "eslint ."
   },
   "author": "ShapeDiver GmbH",
-  "license": "MIT",
+  "license": "GPL-2.0-or-later",
   "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.11.1",
     "@types/node": "20",
     "@types/post-robot": "^10.0.6",
+    "@typescript-eslint/eslint-plugin": "^8.8.0",
+    "@typescript-eslint/parser": "^8.8.0",
+    "eslint": "^9.11.1",
+    "globals": "^15.10.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.3",
     "vite-plugin-static-copy": "^1.0.6"

@@ -22,26 +22,26 @@ import { IConfiguratorLoader } from "./modules/configuratormanager/types/loader"
 import { WordPressConfiguratorLoader } from "./modules/wordpressapi/loader";
 
 /** Id of the div representing the configurator modal. */
-const MODAL_ELEMENT_ID = 'configurator-modal';
+const MODAL_ELEMENT_ID = "configurator-modal";
 /** Id of the iframe hosting the configurator. */
-const IFRAME_ELEMENT_ID = 'configurator-iframe';
+const IFRAME_ELEMENT_ID = "configurator-iframe";
 /** Id of the button used to open the configurator (display the modal). */
-const OPEN_CONFIGURATOR_BUTTON_ID = 'open-configurator';
+const OPEN_CONFIGURATOR_BUTTON_ID = "open-configurator";
 /** Selector for testing whether we are running inside the e-commerce system. */
-const ECOMMERCE_SELECTOR = 'div.wp-site-blocks';
+const ECOMMERCE_SELECTOR = "div.wp-site-blocks";
 /** 
  * Selector for the element that defines the product id. 
  * This is used to get the product id on product pages, 
  * and load the configurator in the background. 
  */
-const PRODUCT_ID_SELECTOR = 'button[name="add-to-cart"]';
+const PRODUCT_ID_SELECTOR = "button[name=\"add-to-cart\"]";
 
 /** Number of key events for toggling configurator visibility. */
 const TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS = 3;
 /** Time window in milliseconds for toggling configurator visibility. */
 const TOGGLE_CONFIGURATOR_VISIBILITY_MSEC = 750;
 /** Key for toggling configurator visibility. */
-const TOGGLE_CONFIGURATOR_VISIBILITY_KEY = 'Escape';
+const TOGGLE_CONFIGURATOR_VISIBILITY_KEY = "Escape";
 
 /**
  * The configurator manager.
@@ -112,7 +112,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 		this.runsInsideECommerceSystem = document.querySelector(ECOMMERCE_SELECTOR) !== null;
 		if (!this.runsInsideECommerceSystem) {
-			this.log('🚫 Not running inside WordPress');
+			this.log("🚫 Not running inside WordPress");
 		}
 		this.debug = !this.runsInsideECommerceSystem || (window as any).configuratorData?.settings?.debug_flag === "1";
 	
@@ -132,26 +132,27 @@ class ConfiguratorManager implements IConfiguratorManager {
 		}
 		this.iframe = iframe;
 
-		this.isConfiguratorVisible = this.modal.style.display !== 'none';
+		this.isConfiguratorVisible = this.modal.style.display !== "none";
 
 		this.configuratorLoader = new WordPressConfiguratorLoader({
 			debug: this.debug,
 			ajaxUrl: (window as any).configuratorData?.ajaxurl,
 			closeConfiguratorHandler: () => {
 				this.setConfiguratorVisibility(false);
+				
 				return Promise.resolve(true);
 			}
-		})
+		});
 
 		this.bindEvents();
 
 		// load and enable the configurator on product pages
 		if (document.querySelector(PRODUCT_ID_SELECTOR)) {
 			this.loadConfigurator()
-			.then((apiConnector) => {
-				(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
-				this.enableConfigurator();
-			});
+				.then((apiConnector) => {
+					(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
+					this.enableConfigurator();
+				});
 		}
 	}
 	
@@ -159,9 +160,9 @@ class ConfiguratorManager implements IConfiguratorManager {
 		this.modal.style.display = visible ? "block" : "none";
 		this.isConfiguratorVisible = visible;
 		if (visible)
-			this.log('🖥️ Configurator modal visible');
+			this.log("🖥️ Configurator modal visible");
 		else
-			this.log('🚪 Configurator modal hidden');
+			this.log("🚪 Configurator modal hidden");
 	}
 	
 	log(...message: any[]): void {
@@ -172,13 +173,13 @@ class ConfiguratorManager implements IConfiguratorManager {
 	bindEvents() {
 
 		// add event handler for open configurator button
-		document.addEventListener('click', async (event) => {
+		document.addEventListener("click", async (event) => {
 			const target = event.target as HTMLElement;
 			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}, .${OPEN_CONFIGURATOR_BUTTON_ID}`))
 				return;
 			event.preventDefault();
 			const apiConnector = await this.loadConfigurator(target);
-			(globalThis as { [key: string]: any }).ecommerceApi = apiConnector
+			(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
 			this.setConfiguratorVisibility(true);
 		});
 
@@ -198,7 +199,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		let toggleKeyPressCount = 0;
 		let timer : NodeJS.Timeout;
 		
-		document.addEventListener('keydown', (event) => {
+		document.addEventListener("keydown", (event) => {
 			if (event.key === TOGGLE_CONFIGURATOR_VISIBILITY_KEY) {
 				toggleKeyPressCount++;
 		
@@ -219,11 +220,12 @@ class ConfiguratorManager implements IConfiguratorManager {
 			}
 		});
 
-		this.log('🎭 Events bound successfully');
+		this.log("🎭 Events bound successfully");
 	}
 
 	get baseUrl(): string {
 		const defaultBaseUrl = (window as any).configuratorData?.settings?.configurator_url;
+		
 		return defaultBaseUrl ? defaultBaseUrl :
 			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
 	}
@@ -237,7 +239,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 				productId = (element as HTMLButtonElement).value;
 		}
 		if (!productId) {
-			this.log('❌ Product id not found');
+			this.log("❌ Product id not found");
+			
 			return Promise.resolve(undefined);
 		}
 
@@ -266,7 +269,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 			openConfiguratorButton.disabled = false;
 		}
 
-		this.log('🚀 Configurator enabled!');
+		this.log("🚀 Configurator enabled!");
 	}
 
 }
