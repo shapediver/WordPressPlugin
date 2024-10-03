@@ -137,6 +137,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		this.configuratorLoader = new WordPressConfiguratorLoader({
 			debug: this.debug,
 			ajaxUrl: (window as any).configuratorData?.ajaxurl,
+			defaultSettingsUrl: (window as any).configuratorData?.default_settings_url,
 			closeConfiguratorHandler: () => {
 				this.setConfiguratorVisibility(false);
 				

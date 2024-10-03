@@ -75,6 +75,8 @@ export interface IWordpressApiOptions {
      * The URL of the WordPress API.
      */
     ajaxUrl: string
+
+   
 }
 
 /**
@@ -82,4 +84,10 @@ export interface IWordpressApiOptions {
  */
 export type IWordPressConfiguratorLoaderOptions = 
     Partial<IWordpressApiOptions> &
-    Pick<IWordPressECommerceApiActionsOptions, "closeConfiguratorHandler">;
+    Pick<IWordPressECommerceApiActionsOptions, "closeConfiguratorHandler"> &
+    {
+        /**
+         * Default URL of the JSON file defining the App Builder settings of the configurator.
+         */
+        defaultSettingsUrl: string | undefined
+    }

@@ -74,6 +74,7 @@ class ShapeDiverConfiguratorPlugin {
     // Register plugin settings
     public function register_settings() {
         register_setting('shapediver_plugin_settings', 'default_configurator_url');
+        register_setting('shapediver_plugin_settings', 'default_settings_url');
         register_setting('shapediver_plugin_settings', 'product_button_label');
         register_setting('shapediver_plugin_settings', 'cart_item_button_label');
         register_setting('shapediver_plugin_settings', 'order_item_button_label');
@@ -99,31 +100,37 @@ class ShapeDiverConfiguratorPlugin {
                 ?>
                 <table class="form-table">
                     <tr valign="top">
-                        <th scope="row">Default configurator URL (this can be overridden for each product)</th>
+                        <th scope="row">Default configurator URL. This can be overridden for each product.</th>
                         <td>
                             <input type="text" name="default_configurator_url" value="<?php echo esc_attr(get_option('default_configurator_url', SHAPEDIVER_APP_BUILDER_URL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Label of the configurator button on the product page</th>
+                        <th scope="row">Default URL of the JSON file defining the App Builder settings of the configurator. This can be a relative or absolute URL, and can be overridden for each product.</th>
+                        <td>
+                            <input type="text" name="default_settings_url" value="<?php echo esc_attr(get_option('default_settings_url')); ?>" />
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Label of the configurator button on the product page.</th>
                         <td>
                             <input type="text" name="product_button_label" value="<?php echo esc_attr(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Label of the configurator button shown for cart items</th>
+                        <th scope="row">Label of the configurator button shown for cart items.</th>
                         <td>
                             <input type="text" name="cart_item_button_label" value="<?php echo esc_attr(get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Label of the configurator button shown for order items</th>
+                        <th scope="row">Label of the configurator button shown for order items.</th>
                         <td>
                             <input type="text" name="order_item_button_label" value="<?php echo esc_attr(get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Debug flag</th>
+                        <th scope="row">Debug flag.</th>
                         <td>
                             <input type="checkbox" name="debug_flag" value="1" <?php checked("1", get_option('debug_flag', false)); ?> />
                             <label for="debug_flag">Check to enable debug messages in the browser console</label>
@@ -476,6 +483,7 @@ class ShapeDiverConfiguratorPlugin {
       
         return array(
             'configurator_url' => get_option('default_configurator_url', SHAPEDIVER_APP_BUILDER_URL),
+            'default_settings_url' => get_option('default_settings_url'),
             'debug_flag' => get_option('debug_flag', false),
         );
     }
