@@ -28,6 +28,7 @@ const IWordpressCartItemSchema = z.object({
 	quantity: z.number(),
 	product_name: z.string(),
 	product_price: z.string(),
+	total: z.number(),
 	custom_data: z.record(z.string()),
 	custom_price: z.number().optional(),
 });

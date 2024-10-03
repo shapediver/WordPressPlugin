@@ -80,6 +80,13 @@ export interface IWordpressCartItem {
      */
     product_price: string
     /**
+     * Subtotal cost of that specific item, excluding any taxes. It is calculated as the product 
+     * of the item's price and the quantity added to the cart. 
+     * This value does not include additional costs like shipping or any applied discounts 
+     * (unless those discounts are already factored into the item price).
+     */
+    total: number,
+    /**
      * TODO type this
      */
     custom_data?: Record<string, string>
