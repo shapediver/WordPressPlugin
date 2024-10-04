@@ -12,6 +12,33 @@ The ShapeDiver WordPress Plugin is designed to enhance WordPress and WooCommerce
 - 3D configuration and visualisation powered by ShapeDiver
 - Easy installation and configuration
 
+## How to use the plugin
+
+Use the plugin manager of WordPress to install the plugin. If you received the plugin as a zip file, use `Add New Plugin -> Upload Plugin`. 
+We plan to add the plugin to the WordPress plugin directory, which will make the plugin available publicly. 
+
+### Plugin Settings
+
+Once the plugin has been installed, you can configure global settings by navigating to `Settings -> ShapeDiver`. 
+All of the settings are optional.  
+
+![Product Settings](resources/plugin_settings.png)
+
+### Product Settings
+
+The plugin exposes settings on the "General" tab of the product edit page. 
+Please see the tooltips for an explanation of the available settings. 
+
+![Product Settings](resources/product_settings.png)
+
+A button labelled "Customize" will be shown on the product page if a configurator is available. 
+The button's label can be changed in the plugin settings. It will be disabled while loading the configurator as 
+an iframe in the background. Clicking the button opens the configurator. The configurator overlays the page and
+should contain a "Close configurator" button. While developing a configurator this button might be missing. If so, press the Escape
+button quickly three times in a row to close the configurator. 
+
+![Product page](resources/product_page_button.png)
+
 ## Development Setup
 
 ### Prerequisites
