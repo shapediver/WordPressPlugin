@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: ShapeDiver 3D Configurator Plugin
+ * Plugin Name: ShapeDiver 3D Configurators
  * Plugin URI: https://github.com/shapediver/WordPressPlugin
  * Description: A plugin to integrate ShapeDiver 3D configurators into WooCommerce.
  * Version: 1.1.0
@@ -8,7 +8,7 @@
  * Author URI: https://www.shapediver.com
  * License: GPLv2 or later
  * License URI: https://opensource.org/license/gpl-2-0
- * Text Domain: shapediver-wordpress-plugin
+ * Text Domain: shapediver-3d-configurators
  * WC requires at least: 3.0
  */
 
@@ -170,7 +170,7 @@ class ShapeDiverConfiguratorPlugin {
         if ($product) {
             $product_id = $product->get_id();
             if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL) . '</button>';
+                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
             }
         }
     }
@@ -227,8 +227,8 @@ class ShapeDiverConfiguratorPlugin {
 
         $quantity = isset($_POST['quantity']) ? intval($_POST['quantity']) : 1;
         $variation_id = isset($_POST['variation_id']) ? intval($_POST['variation_id']) : 0;
-        $custom_data_raw = isset($_POST['custom_data']) ? wp_unslash($_POST['custom_data']) : '';
-        $custom_data = json_decode($custom_data_raw, true);
+        // NOTE: The WordPress plugin checker creates an error for the following line (WordPress.Security.ValidatedSanitizedInput.InputNotSanitized)
+        $custom_data = json_decode(isset($_POST['custom_data']) ? wp_unslash($_POST['custom_data']) : '', true);
         $custom_price = isset($_POST['custom_price']) ? floatval($_POST['custom_price']) : 0;
         
         if ($custom_price < 0) {
@@ -326,7 +326,7 @@ class ShapeDiverConfiguratorPlugin {
                 if (!in_array($display_key, $existing_keys)) {
                     $item_data[] = array(
                         'key' => esc_html($display_key),
-                        'value' => esc_html(is_array($value) ? json_encode($value) : $value)
+                        'value' => esc_html(is_array($value) ? wp_json_encode($value) : $value)
                     );
                     $existing_keys[] = $display_key;
                 }
@@ -342,10 +342,9 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            $button = '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL) . '</button>';
+            echo esc_html($product_name);
+            echo '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . esc_html(get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL)) . '</button>';
         }
-
-        echo $product_name . $button;
     }
 
     // Add "View 3D Model" button after order item
@@ -359,16 +358,16 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = $item->get_meta('model_state_id');
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL) . '</button>';
+            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . esc_html(get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL)) . '</button>';
         }
     }
 
     // Add custom data to cart item
     public function add_custom_data_to_cart_item($cart_item_data, $product_id, $variation_id) {
         if (isset($_POST['custom_data'])) {
-            $custom_data_raw = wp_unslash($_POST['custom_data']);
-            $custom_data = json_decode($custom_data_raw, true);
-    
+            // NOTE: The WordPress plugin checker creates an error for the following line (WordPress.Security.ValidatedSanitizedInput.InputNotSanitized)
+            $custom_data = json_decode(wp_unslash($_POST['custom_data']), true);
+       
             // Sanitize custom data
             $custom_data = array_map('sanitize_text_field', $custom_data);
     
@@ -451,7 +450,7 @@ class ShapeDiverConfiguratorPlugin {
         $fields = array('_slug', '_embedding_ticket', '_model_view_url', '_model_state_id', '_configurator_url', '_settings_url');
         foreach ($fields as $field) {
             if (isset($_POST[$field])) {
-                update_post_meta($post_id, $field, sanitize_text_field($_POST[$field]));
+                update_post_meta($post_id, $field, sanitize_text_field(wp_unslash($_POST[$field])));
             }
         }
     }
