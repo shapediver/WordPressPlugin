@@ -57,7 +57,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 			modelViewUrl: productData.model_view_url,
 			slug: productData.slug,
 			modelStateId,
-			settingsUrl: productData.settings_url ?? this.options.defaultSettingsUrl,
+			settingsUrl: productData.settings_url ? productData.settings_url : this.options.defaultSettingsUrl,
 		});
 
 		// do nothing if the URL didn't change
