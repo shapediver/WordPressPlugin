@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: ShapeDiver WordPress Plugin
+ * Plugin Name: ShapeDiver 3D Configurator Plugin
  * Plugin URI: https://github.com/shapediver/WordPressPlugin
  * Description: A plugin to integrate ShapeDiver 3D configurators into WooCommerce.
- * Version: 1.0.0
+ * Version: 1.1.0
  * Author: ShapeDiver GmbH
  * Author URI: https://www.shapediver.com
  * License: GPLv2 or later
@@ -100,31 +100,31 @@ class ShapeDiverConfiguratorPlugin {
                 ?>
                 <table class="form-table">
                     <tr valign="top">
-                        <th scope="row">Default configurator URL. This can be overridden for each product.</th>
+                        <th scope="row">Default configurator URL. This defaults to ShapeDiver App Builder and can be overridden for each product.</th>
                         <td>
                             <input type="text" name="default_configurator_url" value="<?php echo esc_attr(get_option('default_configurator_url', SHAPEDIVER_APP_BUILDER_URL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Default URL of the JSON file defining the App Builder settings of the configurator. This can be a relative or absolute URL, and can be overridden for each product.</th>
+                        <th scope="row">Default URL of the JSON file defining the App Builder settings of the configurator. This can be a relative or absolute URL, and can be overridden for each product. Leave this empty to not apply a specific theme.</th>
                         <td>
                             <input type="text" name="default_settings_url" value="<?php echo esc_attr(get_option('default_settings_url')); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Label of the configurator button on the product page.</th>
+                        <th scope="row">Label of the configurator button on the product page (defaults to "<?php echo esc_attr(SHAPEDIVER_PRODUCT_BUTTON_LABEL) ?>").</th>
                         <td>
                             <input type="text" name="product_button_label" value="<?php echo esc_attr(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Label of the configurator button shown for cart items.</th>
+                        <th scope="row">Label of the configurator button shown for cart items (defaults to "<?php echo esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_LABEL) ?>").</th>
                         <td>
                             <input type="text" name="cart_item_button_label" value="<?php echo esc_attr(get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL)); ?>" />
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Label of the configurator button shown for order items.</th>
+                        <th scope="row">Label of the configurator button shown for order items (defaults to "<?php echo esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL) ?>").</th>
                         <td>
                             <input type="text" name="order_item_button_label" value="<?php echo esc_attr(get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL)); ?>" />
                         </td>
@@ -153,12 +153,25 @@ class ShapeDiverConfiguratorPlugin {
         ));
     }
 
+    // Function to check whether any of the following product meta fields are set: 
+    // _model_view_url, _embedding_ticket, _slug, _settings_url
+    public function is_product_configurable($product_id) {
+        $model_view_url = get_post_meta($product_id, '_model_view_url', true);
+        $embedding_ticket = get_post_meta($product_id, '_embedding_ticket', true);
+        $slug = get_post_meta($product_id, '_slug', true);
+        $settings_url = get_post_meta($product_id, '_settings_url', true);
+        return !empty($model_view_url) || !empty($embedding_ticket) || !empty($slug) || !empty($settings_url);
+    }
+    
+
     // Add "Customize" button to product page
     public function add_configurator_button() {
         global $product;
         if ($product) {
             $product_id = $product->get_id();
-            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL) . '</button>';
+            if ($this->is_product_configurable($product_id)) {
+                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL) . '</button>';
+            }
         }
     }
     // Add modal for configurator iframe
@@ -328,8 +341,10 @@ class ShapeDiverConfiguratorPlugin {
         $product_id = $cart_item['product_id'];
         $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
         
-        $button = '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL) . '</button>';
-        
+        if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
+            $button = '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL) . '</button>';
+        }
+
         echo $product_name . $button;
     }
 
@@ -343,10 +358,8 @@ class ShapeDiverConfiguratorPlugin {
         $product_id = $item->get_product_id();
         $model_state_id = $item->get_meta('model_state_id');
         
-        if ($model_state_id) {
+        if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
             echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL) . '</button>';
-        } else {
-            error_log('No model_state_id found for order item: ' . $item_id);
         }
     }
 
@@ -421,7 +434,7 @@ class ShapeDiverConfiguratorPlugin {
             'id' => '_configurator_url',
             'label' => __('Configurator URL', 'woocommerce'),
             'desc_tip' => 'true',
-            'description' => __('Optional. Enter the configurator URL for this product. If left empty, ShapeDiver App Builder will be used.', 'woocommerce')
+            'description' => __('Optional. Enter the configurator URL for this product. If left empty, the default configurator URL configured in the ShapeDiver plugin settings will be used. This defaults to ShapeDiver App Builder.', 'woocommerce')
         ));
         woocommerce_wp_text_input(array(
             'id' => '_settings_url',
@@ -463,7 +476,6 @@ class ShapeDiverConfiguratorPlugin {
         );
         wp_send_json_success($data);
     }
-    
 
     public function get_user_profile() {
         if (!is_user_logged_in()) {
