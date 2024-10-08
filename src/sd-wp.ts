@@ -26,7 +26,7 @@ const MODAL_ELEMENT_ID = "configurator-modal";
 /** Id of the iframe hosting the configurator. */
 const IFRAME_ELEMENT_ID = "configurator-iframe";
 /** Id of the button used to open the configurator (display the modal). */
-const OPEN_CONFIGURATOR_BUTTON_ID = "open-configurator";
+const OPEN_CONFIGURATOR_BUTTON_ID = "sd-open-configurator";
 /** Selector for testing whether we are running inside the e-commerce system. */
 const ECOMMERCE_SELECTOR = "div.wp-site-blocks";
 
@@ -170,7 +170,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		// add event handler for open configurator button
 		document.addEventListener("click", async (event) => {
 			const target = event.target as HTMLElement;
-			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}, .${OPEN_CONFIGURATOR_BUTTON_ID}`))
+			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`))
 				return;
 			event.preventDefault();
 			const apiConnector = await this.loadConfigurator(target);
@@ -249,15 +249,16 @@ class ConfiguratorManager implements IConfiguratorManager {
 	}
 
 	enableConfigurator(): void {
-		const openConfiguratorButton = document.getElementById(
-			OPEN_CONFIGURATOR_BUTTON_ID
-		) as HTMLButtonElement;
+		const openConfiguratorButtons = document.querySelectorAll(`#${OPEN_CONFIGURATOR_BUTTON_ID}`);
 
-		if (!openConfiguratorButton) {
-			this.log(`ConfiguratorManager: Element with id ${OPEN_CONFIGURATOR_BUTTON_ID} not found.`);
+		if (openConfiguratorButtons.length === 0) {
+			this.log(`ConfiguratorManager: No elements with id ${OPEN_CONFIGURATOR_BUTTON_ID} found.`);
 		}
 		else {
-			openConfiguratorButton.disabled = false;
+			openConfiguratorButtons.forEach((button) => {
+				if (button instanceof HTMLButtonElement)
+					button.disabled = false;
+			});
 		}
 
 		this.log("🚀 Configurator enabled!");

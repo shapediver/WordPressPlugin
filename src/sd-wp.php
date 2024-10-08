@@ -20,7 +20,7 @@ define('SHAPEDIVER_PLUGIN_VERSION', '1.0.0');
 define('SHAPEDIVER_PRODUCT_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-product-button');
 define('SHAPEDIVER_CART_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button');
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button');
-define('SHAPEDIVER_BUTTON_ID', 'open-configurator');
+define('SHAPEDIVER_BUTTON_ID', 'sd-open-configurator');
 define('SHAPEDIVER_APP_BUILDER_URL', 'https://appbuilder.shapediver.com/v1/main/latest/');
 define('SHAPEDIVER_PRODUCT_BUTTON_LABEL', 'Customize'); // Default label for the configurator button on the product page
 define('SHAPEDIVER_CART_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for cart items
@@ -39,11 +39,13 @@ class ShapeDiverConfiguratorPlugin {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // WooCommerce product page modifications
- 
         add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
         add_action('woocommerce_process_product_meta', array($this, 'save_custom_product_fields'));
+
+        // Register shortcode for defining a configurator button
+        add_shortcode('sd_configurator_button', array($this, 'configurator_button_shortcode'));
 
         // AJAX handlers
         $this->register_ajax_handlers();
@@ -174,6 +176,7 @@ class ShapeDiverConfiguratorPlugin {
             }
         }
     }
+
     // Add modal for configurator iframe
     public function add_configurator_modal() {
         ?>
@@ -185,6 +188,31 @@ class ShapeDiverConfiguratorPlugin {
         <?php
     }
 
+    // Function for the "configurator_button" shortcode
+    function configurator_button_shortcode($atts) {
+        global $product;
+    
+        // Define default attributes for the shortcode
+        $atts = shortcode_atts(
+            array(
+                'label' => get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL), // Button text
+                'class'  => SHAPEDIVER_PRODUCT_BUTTON_CLASSES, // Button classes
+            ),
+            $atts
+        );
+
+        if ($product) {
+            $product_id = $product->get_id();
+            if ($this->is_product_configurable($product_id)) {
+                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . 
+                    '" class="' . esc_attr($atts['class']) . 
+                    '" data-product-id="' . esc_attr($product_id) . '" disabled>' . 
+                    esc_html($atts['label']) . 
+                    '</button>';
+            }
+        }
+    }
+    
     // Register AJAX handlers
     private function register_ajax_handlers() {
         $ajax_actions = array(
