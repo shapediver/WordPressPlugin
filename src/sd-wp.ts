@@ -29,12 +29,6 @@ const IFRAME_ELEMENT_ID = "configurator-iframe";
 const OPEN_CONFIGURATOR_BUTTON_ID = "open-configurator";
 /** Selector for testing whether we are running inside the e-commerce system. */
 const ECOMMERCE_SELECTOR = "div.wp-site-blocks";
-/** 
- * Selector for the element that defines the product id. 
- * This is used to get the product id on product pages, 
- * and load the configurator in the background. 
- */
-const PRODUCT_ID_SELECTOR = "button[name=\"add-to-cart\"]";
 
 /** Number of key events for toggling configurator visibility. */
 const TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS = 3;
@@ -60,7 +54,7 @@ interface IConfiguratorManager {
 	 * 
 	 * @param target 
 	 */
-	loadConfigurator(target?: HTMLElement): Promise<IECommerceApiConnector | undefined>
+	loadConfigurator(target?: HTMLElement | null): Promise<IECommerceApiConnector | undefined>
 
 	/**
 	 * Set the visibility of the configurator.
@@ -148,7 +142,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		this.bindEvents();
 
 		// load and enable the configurator on product pages
-		if (document.querySelector(PRODUCT_ID_SELECTOR)) {
+		if (document.getElementById(OPEN_CONFIGURATOR_BUTTON_ID)) {
 			this.loadConfigurator()
 				.then((apiConnector) => {
 					(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
@@ -231,14 +225,10 @@ class ConfiguratorManager implements IConfiguratorManager {
 			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
 	}
 
-	async loadConfigurator(target?: HTMLElement): Promise<IECommerceApiConnector | undefined> {
+	async loadConfigurator(target?: HTMLElement | null): Promise<IECommerceApiConnector | undefined> {
 	
-		let productId = target?.dataset.productId;
-		if (!productId) {
-			const element = document.querySelector(PRODUCT_ID_SELECTOR);
-			if (element)
-				productId = (element as HTMLButtonElement).value;
-		}
+		target = target ?? document.getElementById(OPEN_CONFIGURATOR_BUTTON_ID);
+		const productId = target?.dataset.productId;
 		if (!productId) {
 			this.log("❌ Product id not found");
 			
