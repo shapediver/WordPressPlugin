@@ -11,7 +11,8 @@ import {
 import { WordpressApi, WordPressECommerceApiActions } from "./api";
 import { IECommerceApiConnector } from "../../shared/modules/ecommerce/types/ecommerceapi";
 
-const CROSSWINDOW_API_TIMEOUT = 10000;
+/** Timeout for establishing the cross-window API connection. */
+const CROSSWINDOW_API_TIMEOUT = 20000;
 
 export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 
