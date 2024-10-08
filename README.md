@@ -39,6 +39,16 @@ button quickly three times in a row to close the configurator.
 
 <img alt="Product page" src="resources/product_page_button.png" width="320"/>
 
+### Shortcode for configurator button
+
+When using a custom theme, the plugin might not be able to automatically add the configurator button. In this case, you can use the 
+`[sd_configurator_button]` shortcode to place the button on the product page. The shortcode supports the following optional attributes: 
+
+  * `label`: Button text
+  * `class`: CSS classes to assign to the button
+
+Example: `[sd_configurator_button label="My button text" class="myclass other-class yet_another_class"]`
+
 ## Development Setup
 
 ### Prerequisites
