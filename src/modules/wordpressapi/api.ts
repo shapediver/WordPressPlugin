@@ -16,6 +16,7 @@ import {
 	IAddItemToCartData,
 	IAddItemToCartReply,
 	IECommerceApiActions,
+	IGetParentPageInfoReply,
 	IGetUserProfileReply,
 } from "../../shared/modules/ecommerce/types/ecommerceapi";
 
@@ -201,6 +202,10 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 			email: result.email,
 			name: result.name
 		};
+	}
+
+	async getParentPageInfo(): Promise<IGetParentPageInfoReply> {
+		return Promise.resolve({ href: window.location.href });
 	}
 
 }
