@@ -8,9 +8,29 @@ The ShapeDiver WordPress Plugin is designed to enhance WordPress and WooCommerce
 
 ## Features
 
-- Integration with WordPress and WooCommerce
-- 3D configuration and visualisation powered by ShapeDiver
-- Easy installation and configuration
+* 3D configuration and visualisation powered by ShapeDiver
+* Simple installation and setup
+
+WooCommerce products can be linked to ShapeDiver 3D configurators implemented with App Builder. The following settings can be configured per product: 
+
+* ShapeDiver models can be referenced by `ticket` and `modelViewUrl`, or by `slug`
+* Optional _Model State ID_, defining the initial state of the configurator
+ 
+The following optional settings can be configured globally and overridden per product: 
+
+* Configurator URL. This defaults to the base URL of App Builder. Using this setting one can make use of custom deployments of App Builder. 
+* URL of a JSON file defining the theme and further App Builder settings.
+
+A button labelled "Customize" will be shown on the product page if a configurator is available. This button will also be shown for corresponding line items in the cart and on orders. Button labels can be configured globally, and buttons can be styled using WordPress themes. 
+
+When adding items to the cart from a configurator, the following information can be passed along and stored as part of the line item: 
+
+* Custom price
+* Description
+* Model State ID
+* Soon to come: Image URL
+
+The model state ID is used to recall the configured state when opening the configurator from line items in the cart or orders. Contextual information about the source of opening the configurator is passed to App Builder, allowing the configurator to appear differently when opened from the cart or from an order.
 
 ## How to use the plugin
 
