@@ -28,7 +28,7 @@ const IFRAME_ELEMENT_ID = "configurator-iframe";
 /** Id of the button used to open the configurator (display the modal). */
 const OPEN_CONFIGURATOR_BUTTON_ID = "sd-open-configurator";
 /** Selector for testing whether we are running inside the e-commerce system. */
-const ECOMMERCE_SELECTOR = "div.wp-site-blocks";
+const TEST_PAGE_SELECTOR = "body.shapediver-wordpress-plugin-test-page";
 
 /** Number of key events for toggling configurator visibility. */
 const TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS = 3;
@@ -104,12 +104,12 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 	constructor() {
 
-		this.runsInsideECommerceSystem = document.querySelector(ECOMMERCE_SELECTOR) !== null;
+		this.runsInsideECommerceSystem = document.querySelector(TEST_PAGE_SELECTOR) === null;
+		this.debug = !this.runsInsideECommerceSystem || (window as any).configuratorData?.settings?.debug_flag === "1";
 		if (!this.runsInsideECommerceSystem) {
 			this.log("🚫 Not running inside WordPress");
 		}
-		this.debug = !this.runsInsideECommerceSystem || (window as any).configuratorData?.settings?.debug_flag === "1";
-	
+		
 		const modal = document.getElementById(MODAL_ELEMENT_ID);
 		if (!modal) {
 			const msg = `ConfiguratorManager: Element with id ${MODAL_ELEMENT_ID} not found.`;
