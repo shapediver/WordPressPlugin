@@ -237,30 +237,13 @@ class ShapeDiverConfiguratorPlugin {
 
     // Display custom data in cart and order
     private function display_custom_data() {
-
-        // :::: WORKING ::::
-
-        // :::: ORDER ::::
         // This adds the button after the order item in the order overview page
         add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
         // This modifies the display key of the order item meta data
         add_filter('woocommerce_order_item_display_meta_key', array($this, 'modify_order_item_meta_key'), 10, 3);
-
-        // :::: CART ::::
         // This adds the custom data to the cart item in the cart overview page
         add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
-        
-        // :::: NOT WORKING ::::
-        // This adds the button to the cart item in the cart overview page
-
-        // how add a button to the product name in the cart overview page?
-        // add_filter('woocommerce_cart_item_name', array($this, 'add_button_to_cart_item'), 10, 3);
     } 
-
-    // Add "View 3D Model" button after cart item
-    public function add_button_to_cart_item($product_name, $cart_item, $cart_item_key) {
-        return "new name";
-    }
 
     public function modify_order_item_meta_key($display_key, $meta_key, $item) {
         if ($display_key === 'model_state_id') {
@@ -389,7 +372,11 @@ class ShapeDiverConfiguratorPlugin {
                 }
             }
         }
-        
+        // add the product id to the item data
+        $item_data[] = array(
+            'key' => 'Product ID',
+            'value' => esc_html($cart_item['product_id'])
+        );
         return $item_data;
     }
 
