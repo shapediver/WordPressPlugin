@@ -36,7 +36,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 
 		this.log("🚀 Loading configurator", options);
 		// get product data, or use dummy data for local testing
-		const productId = options.productId;
+		const { productId, context } = options;
 		const productData = this.wordpressApi
 			? await this.wordpressApi.getProductData(parseInt(productId))
 		// in local development mode, use dummy data 
@@ -59,6 +59,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 			slug: productData.slug,
 			modelStateId,
 			settingsUrl: productData.settings_url ? productData.settings_url : this.options.defaultSettingsUrl,
+			context,
 		});
 
 		// do nothing if the URL didn't change
