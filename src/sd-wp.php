@@ -371,7 +371,12 @@ class ShapeDiverConfiguratorPlugin {
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
             echo esc_html($product_name);
-            echo '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . esc_html(get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL)) . '</button>';
+            echo '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . 
+                '" data-model-state-id="' . esc_attr($model_state_id) . 
+                '" data-context=cart' . 
+                ' data-product-id="' . esc_attr($product_id) . '">' . 
+                esc_html(get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL)) . 
+                '</button>';
         }
     }
 
@@ -386,7 +391,12 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = $item->get_meta('model_state_id');
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . '" data-model-state-id="' . esc_attr($model_state_id) . '" data-product-id="' . esc_attr($product_id) . '">' . esc_html(get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL)) . '</button>';
+            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
+                '" data-model-state-id="' . esc_attr($model_state_id) . 
+                '" data-context=order' . 
+                ' data-product-id="' . esc_attr($product_id) . '">' . 
+                esc_html(get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL)) . 
+                '</button>';
         }
     }
 
