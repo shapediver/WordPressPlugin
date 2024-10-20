@@ -349,6 +349,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 			button.setAttribute("class", this.configuration.settings.cart_item_button_classes);
 			button.setAttribute("data-model-state-id", modelStateId);
 			button.setAttribute("data-product-id", productId);
+			button.setAttribute("data-context", "cart");
 
 			cartItem.insertAdjacentElement("afterend", button);
 
