@@ -268,13 +268,15 @@ class ConfiguratorManager implements IConfiguratorManager {
 		}
 
 		const modelStateId = target?.dataset.modelStateId;
+		const context = target?.dataset.context;
 
-		this.log(`🔓 Opening configurator for productId "${productId}" modelStateId "${modelStateId}"`);
+		this.log(`🔓 Opening configurator for productId "${productId}" modelStateId "${modelStateId}" context "${context}"`);
 
 		const apiConnector = await this.configuratorLoader.load(this.iframe, {
 			productId,
 			modelStateId,
 			baseUrl: this.baseUrl,
+			context
 		});
 
 		return Promise.resolve(apiConnector);

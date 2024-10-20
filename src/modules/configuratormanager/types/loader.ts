@@ -21,6 +21,14 @@ export interface IConfiguratorLoaderOptions {
      * that may be overridden by the product data.
      */
     baseUrl: string
+
+    /**
+     * Context to be passed to the configurator. Typical values: 
+     *   * undefined (default)
+     *   * "cart" (opened from the cart)
+     *   * "order" (opened from an order)
+     */
+    context?: string
 }
 
 /**
