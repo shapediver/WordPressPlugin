@@ -37,6 +37,9 @@ const TOGGLE_CONFIGURATOR_VISIBILITY_MSEC = 750;
 /** Key for toggling configurator visibility. */
 const TOGGLE_CONFIGURATOR_VISIBILITY_KEY = "Escape";
 
+const WC_BLOCK_COMPONENTS_PRODUCT_METADATA_CLASS = "wc-block-components-product-metadata";
+const WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS = "wc-block-components-product-details";
+
 /**
  * The configurator manager.
  */
@@ -76,6 +79,28 @@ interface IConfiguratorManager {
 	 * True if the code runs inside the eCommerce environment.
 	 */
 	readonly runsInsideECommerceSystem: boolean
+
+	/** Get the configuration object. */
+	readonly configuration: IConfiguration
+}
+
+/**
+ * Settings of the configurator.
+ */
+interface IConfiguration {
+	ajaxurl: string,
+	settings: IPluginSettings
+}
+
+/**
+ * Global settings of the WordPress plugin.
+ */
+interface IPluginSettings {
+	configurator_url: string,
+	default_settings_url: string,
+	debug_flag: string,
+	cart_item_button_label: string,
+	cart_item_button_classes: string,
 }
 
 class ConfiguratorManager implements IConfiguratorManager {
@@ -105,7 +130,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 	constructor() {
 
 		this.runsInsideECommerceSystem = document.querySelector(TEST_PAGE_SELECTOR) === null;
-		this.debug = !this.runsInsideECommerceSystem || (window as any).configuratorData?.settings?.debug_flag === "1";
+		this.debug = !this.runsInsideECommerceSystem || this.configuration.settings.debug_flag === "1";
 		if (!this.runsInsideECommerceSystem) {
 			this.log("🚫 Not running inside WordPress");
 		}
@@ -130,8 +155,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 		this.configuratorLoader = new WordPressConfiguratorLoader({
 			debug: this.debug,
-			ajaxUrl: (window as any).configuratorData?.ajaxurl,
-			defaultSettingsUrl: (window as any).configuratorData?.settings.default_settings_url,
+			ajaxUrl: this.configuration.ajaxurl,
+			defaultSettingsUrl: this.configuration.settings.default_settings_url,
 			closeConfiguratorHandler: () => {
 				this.setConfiguratorVisibility(false);
 				
@@ -149,6 +174,13 @@ class ConfiguratorManager implements IConfiguratorManager {
 					this.enableConfigurator();
 				});
 		}
+
+		// Add MutationObserver to watch for cart or mini cart opening
+		this.observeCartChanges();
+	}
+	
+	public get configuration(): IConfiguration {
+		return (window as any).configuratorData;
 	}
 	
 	setConfiguratorVisibility(visible: boolean): void {
@@ -219,7 +251,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 	}
 
 	get baseUrl(): string {
-		const defaultBaseUrl = (window as any).configuratorData?.settings?.configurator_url;
+		const defaultBaseUrl = this.configuration.settings.configurator_url;
 		
 		return defaultBaseUrl ? defaultBaseUrl :
 			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
@@ -266,6 +298,104 @@ class ConfiguratorManager implements IConfiguratorManager {
 		this.log("🚀 Configurator enabled!");
 	}
 
+	/**
+	 * Get the value of a custom data item rendered in the cart.
+	 * @param cartItem 
+	 * @param paramId 
+	 * @returns 
+	 */
+	getCartItemValue = (cartItem: Element, paramId: string): string | undefined => {
+		return cartItem
+			.querySelector(
+				`.${WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS}__${paramId} .${WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS}__value`
+			)
+			?.textContent?.trim();
+	};
+
+	addConfiguratorButtonsToCartItems(): void {
+		// Find all line item detail elements
+		const cartItems = document.querySelectorAll(
+			`.${WC_BLOCK_COMPONENTS_PRODUCT_METADATA_CLASS}`
+		);
+
+		// Convert NodeList to Array and iterate
+		Array.from(cartItems).forEach((cartItem) => {
+			
+			// Check if a button already exists inside the product element
+			const existingButton = cartItem.parentElement?.querySelector(
+				`#${OPEN_CONFIGURATOR_BUTTON_ID}`
+			);
+
+			if (existingButton) {
+				return;
+			}
+
+			// get data from the cart item
+			const modelStateId = this.getCartItemValue(cartItem, "configuration-id");
+			const productId = this.getCartItemValue(cartItem, "product-id");
+
+			if (!modelStateId || !productId) {
+				return;
+			}
+			
+			// Create a new button element
+			const button = document.createElement("button");
+
+			button.textContent = this.configuration.settings.cart_item_button_label;
+			button.setAttribute("id", OPEN_CONFIGURATOR_BUTTON_ID);
+			button.setAttribute("class", this.configuration.settings.cart_item_button_classes);
+			button.setAttribute("data-model-state-id", modelStateId);
+			button.setAttribute("data-product-id", productId);
+
+			cartItem.insertAdjacentElement("afterend", button);
+
+			return;
+		});
+	}
+
+	/**
+	 * Check if the cart or mini cart or the order summary is part of the DOM.
+	 * @returns 
+	 */
+	cartIsPartOfDom(): boolean {
+		return (
+			// Check for the presence of the mini cart
+			document.querySelector(".wp-block-woocommerce-mini-cart-items-block") !==
+				null ||
+			// Check for the presence of cart
+			document.querySelector(".wc-block-cart-items") !== null ||
+			// Check for the presence order summary shown on the checkout page
+			document.querySelector(".wc-block-components-order-summary") !== null
+		);
+	}
+
+	/**
+	 * List for DOM mutations to detect the presence of the cart or mini cart. 
+	 * If so, add configurator buttons to cart items.
+	 */
+	observeCartChanges(): void {
+		const observer = new MutationObserver((mutations) => {
+			mutations.forEach((mutation) => {
+				if (mutation.type === "childList" || mutation.type === "attributes") {
+					if (this.cartIsPartOfDom()) {
+						this.addConfiguratorButtonsToCartItems();
+					}
+				}
+			});
+		});
+
+		observer.observe(document.body, {
+			childList: true,
+			subtree: true,
+			attributes: true,
+			attributeFilter: ["class"],
+		});
+
+		// Check immediately in case the cart is already open
+		if (this.cartIsPartOfDom()) {
+			this.addConfiguratorButtonsToCartItems();
+		}
+	}
 }
 
 const configuratorManager = new ConfiguratorManager();

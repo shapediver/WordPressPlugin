@@ -22,7 +22,10 @@
   border: none;
 }
 
-#sd-open-configurator {
+.shapediver-product-button {
   margin-left: 10px;
 }
 
+.wc-block-components-product-details__product-id {
+  display: none;
+}

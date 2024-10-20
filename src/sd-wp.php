@@ -230,18 +230,35 @@ class ShapeDiverConfiguratorPlugin {
 
     // Modify WooCommerce cart and checkout
     private function modify_woocommerce_cart_and_checkout() {
+        // This adds the custom price to the cart item
         add_filter('woocommerce_add_cart_item', array($this, 'add_custom_price_to_cart_item'), 10, 2);
+        // Restore custom price when getting cart item from session
         add_filter('woocommerce_get_cart_item_from_session', array($this, 'get_cart_item_from_session'), 10, 2);
+        // Add custom data to cart item
         add_filter('woocommerce_add_cart_item_data', array($this, 'add_custom_data_to_cart_item'), 10, 3);
+        // On checkout: Add custom data from cart item to order item 
+        add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_item'), 10, 4);
     }
 
     // Display custom data in cart and order
     private function display_custom_data() {
-        add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
+        // This adds the button after the order item in the order overview page
         add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
-        
-        add_action('woocommerce_checkout_create_order_line_item', array($this, 'add_custom_data_to_order_items'), 10, 4);
+        // This modifies the display key of the order item meta data
+        add_filter('woocommerce_order_item_display_meta_key', array($this, 'modify_order_item_meta_key'), 10, 3);
+        // This adds the custom data to the cart item in the cart overview page
+        add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
     } 
+
+    public function modify_order_item_meta_key($display_key, $meta_key, $item) {
+        if ($display_key === 'model_state_id') {
+            return "Configuration ID";
+        }
+        if ($display_key === 'description') {
+            return "Description";
+        }
+        return $display_key;
+    }
  
     // AJAX handler to add product to cart 
     public function add_to_cart() {
@@ -338,7 +355,7 @@ class ShapeDiverConfiguratorPlugin {
         }
         return $cart_item;
     }
-    
+
     // Display custom data in cart
     public function display_custom_data_in_cart($item_data, $cart_item) {
         if (isset($cart_item['custom_data'])) {
@@ -346,7 +363,7 @@ class ShapeDiverConfiguratorPlugin {
             foreach ($cart_item['custom_data'] as $key => $value) {
                 $display_key = $key;
                 if ($key === 'model_state_id') {
-                    $display_key = 'ID';
+                    $display_key = 'Configuration ID';
                 } else {
                     $display_key = str_replace('_', ' ', $display_key);
                 }
@@ -360,30 +377,23 @@ class ShapeDiverConfiguratorPlugin {
                 }
             }
         }
-        
+        // Add the product id to the item data: 
+        // We need this to dynamically add a button for
+        // opening the configurator to the cart item. 
+        // We hide the element displaying the product id using CSS. 
+        $item_data[] = array(
+            'key' => 'Product ID',
+            'value' => esc_html($cart_item['product_id'])
+        );
         return $item_data;
-    }
-
-    // Add "View 3D Model" button after cart item
-    public function add_button_to_cart_item($product_name, $cart_item, $cart_item_key) {
-        $product_id = $cart_item['product_id'];
-        $model_state_id = isset($cart_item['model_state_id']) ? $cart_item['model_state_id'] : '';
-        
-        if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            echo esc_html($product_name);
-            echo '<br><button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_CART_ITEM_BUTTON_CLASSES) . 
-                '" data-model-state-id="' . esc_attr($model_state_id) . 
-                '" data-context=cart' . 
-                ' data-product-id="' . esc_attr($product_id) . '">' . 
-                esc_html(get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL)) . 
-                '</button>';
-        }
     }
 
     // Add "View 3D Model" button after order item
     public function add_button_after_order_item($item_id, $item, $order) {
         if (!is_object($item) || !method_exists($item, 'get_product_id')) {
             error_log('Invalid item object in add_button_after_order_item');
+
+            echo 'Invalid item object in add_button_after_order_item';
             return;
         }
     
@@ -400,22 +410,14 @@ class ShapeDiverConfiguratorPlugin {
         }
     }
 
-    // Add custom data to cart item
+    // Filter: Add custom data to cart item
     public function add_custom_data_to_cart_item($cart_item_data, $product_id, $variation_id) {
         if (isset($_POST['custom_data'])) {
             // NOTE: The WordPress plugin checker creates an error for the following line (WordPress.Security.ValidatedSanitizedInput.InputNotSanitized)
             $custom_data = json_decode(wp_unslash($_POST['custom_data']), true);
-       
             // Sanitize custom data
             $custom_data = array_map('sanitize_text_field', $custom_data);
-    
             $cart_item_data['custom_data'] = $custom_data;
-    
-            // Add custom name to cart item data
-            if (isset($custom_data['custom_name'])) {
-                $cart_item_data['custom_data']['custom_name'] = sanitize_text_field($custom_data['custom_name']);
-            }
-    
             // Store model_state_id separately for easy access
             if (isset($custom_data['model_state_id'])) {
                 $cart_item_data['model_state_id'] = sanitize_text_field($custom_data['model_state_id']);
@@ -424,18 +426,23 @@ class ShapeDiverConfiguratorPlugin {
         return $cart_item_data;
     }
 
-    // Add custom data to order items
-    public function add_custom_data_to_order_items($item, $cart_item_key, $values, $order) {
+    // Action: Add custom data to order items
+    public function add_custom_data_to_order_item($item, $cart_item_key, $values, $order) {
         if (isset($values['custom_data'])) {
-            foreach ($values['custom_data'] as $key => $value) {
-                $sanitized_key = sanitize_text_field($key);
-                $sanitized_value = is_array($value) ? array_map('sanitize_text_field', $value) : sanitize_text_field($value);
-                $item->add_meta_data($sanitized_key, $sanitized_value);
+            $custom_data = $values['custom_data'];
+            
+            // Add model_state_id separately
+            if (isset($custom_data['model_state_id'])) {
+                $item->add_meta_data('model_state_id', sanitize_text_field($custom_data['model_state_id']));
             }
-            // Add custom name as a separate meta
-            if (isset($values['custom_data']['custom_name'])) {
-                $item->add_meta_data('custom_name', sanitize_text_field($values['custom_data']['custom_name']));
+            
+            // Add description separately
+            if (isset($custom_data['description'])) {
+                $item->add_meta_data('description', sanitize_text_field($custom_data['description']));
             }
+            
+            // Add all custom data as a single meta field - to be clarified why we need this
+            $item->add_meta_data('custom_data', $custom_data);
         }
     }
 
@@ -534,6 +541,8 @@ class ShapeDiverConfiguratorPlugin {
             'configurator_url' => get_option('default_configurator_url', SHAPEDIVER_APP_BUILDER_URL),
             'default_settings_url' => get_option('default_settings_url'),
             'debug_flag' => get_option('debug_flag', false),
+            'cart_item_button_label' => get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL),
+            'cart_item_button_classes' => get_option('cart_item_button_classes', SHAPEDIVER_CART_ITEM_BUTTON_CLASSES),
         );
     }
 }
