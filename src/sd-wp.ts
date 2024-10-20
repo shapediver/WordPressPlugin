@@ -20,6 +20,9 @@ along with this program; if not, see <https://www.gnu.org/licenses/>.
 import { IECommerceApiConnector } from "shared/modules/ecommerce/types/ecommerceapi";
 import { IConfiguratorLoader } from "./modules/configuratormanager/types/loader";
 import { WordPressConfiguratorLoader } from "./modules/wordpressapi/loader";
+import packagejson from "../package.json";
+
+console.log(`ShapeDiver WordPress Plugin v${packagejson.version}`);
 
 /** Id of the div representing the configurator modal. */
 const MODAL_ELEMENT_ID = "configurator-modal";
