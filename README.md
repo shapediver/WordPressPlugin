@@ -2,40 +2,13 @@
 
 This plugin integrates 3D Configurators built using [ShapeDiver App Builder](https://help.shapediver.com/doc/shapediver-app-builder) into WordPress and WooCommerce. 
 
-## Project Overview
+The App Builder features of ShapeDiver allow you to create ShapeDiver Apps - flexible, customizable single-page 3D web applications - using only Grasshopper. The ShapeDiver WordPress Plugin allows you to easily integrate ShapeDiver Apps into your WooCommerce store. 
 
-The ShapeDiver WordPress Plugin is designed to enhance WordPress and WooCommerce sites with ShapeDiver's 3D model visualization capabilities. This plugin allows for seamless integration of ShapeDiver's technology into your WordPress environment.
-
-## Features
-
-* 3D configuration and visualisation powered by ShapeDiver
-* Simple installation and setup
-
-WooCommerce products can be linked to ShapeDiver 3D configurators implemented with App Builder. The following settings can be configured per product: 
-
-* ShapeDiver models can be referenced by `ticket` and `modelViewUrl`, or by `slug`
-* Optional _Model State ID_, defining the initial state of the configurator
- 
-The following optional settings can be configured globally and overridden per product: 
-
-* Configurator URL. This defaults to the base URL of App Builder. Using this setting one can make use of custom deployments of App Builder. 
-* URL of a JSON file defining the theme and further App Builder settings.
-
-A button labelled "Customize" will be shown on the product page if a configurator is available. This button will also be shown for corresponding line items in the cart and on orders. Button labels can be configured globally, and buttons can be styled using WordPress themes. 
-
-When adding items to the cart from a configurator, the following information can be passed along and stored as part of the line item: 
-
-* Custom price
-* Description
-* Model State ID
-* Soon to come: Image URL
-
-The model state ID is used to recall the configured state when opening the configurator from line items in the cart or orders. Contextual information about the source of opening the configurator is passed to App Builder, allowing the configurator to appear differently when opened from the cart or from an order.
+Link ShapeDiver Apps to your products and let your customers configure and visualize your products in 3D. If you have configured a ShapeDiver App for a product, it opens as overlay on the product page. Using the custom “Add To Cart” action component for App Builder, users can play with the configurator and add their configured product to the cart.
 
 ## How to use the plugin
 
-Use the plugin manager of WordPress to install the plugin. If you received the plugin as a zip file, use `Add New Plugin -> Upload Plugin`. 
-We plan to add the plugin to the WordPress plugin directory, which will make the plugin available publicly. 
+Use the plugin manager of WordPress to install the plugin. Although we plan to do so, the plugin is not yet available via the WordPress plugin directory. Therefore please [download](https://github.com/shapediver/WordPressPlugin/releases) the plugin as a zip file, and use `Add New Plugin -> Upload Plugin`. 
 
 ### Plugin Settings
 
@@ -48,6 +21,14 @@ All of the settings are optional.
 
 The plugin exposes settings on the "General" tab of the product edit page. 
 Please see the tooltips for an explanation of the available settings. 
+
+Typically you define the `slug` of the model you want to link to the product. As a prerequisite, you need to enable [iframe embedding](https://help.shapediver.com/doc/iframe-settings) for your model. Make sure to whitelist your domain(s) in your [embedding settings](https://help.shapediver.com/doc/setup-domains-for-embedding). 
+
+As an alternative, you can specify `ticket` and `modelViewUrl` instead of the `slug`.  This requires [direct embedding](https://help.shapediver.com/doc/developers-settings) to be enabled for your model, and [strong authorization](https://help.shapediver.com/doc/developers-settings) to be disabled. As a result, the protection of your model will be less strict, but the model will load significantly faster.
+
+The optional `Model State ID` allows you to define a state of parameters that should be loaded initially, instead of the model's default parameter values. 
+
+You can customize the theme used by App Builder by specifying a `Settings JSON URL`. This also provides you with access to several advanced features of App Builder. Read more about the possibilities in our [help center](https://help.shapediver.com/doc/customize-a-theme). 
 
 <img alt="Product Settings" src="resources/product_settings.png" width="640"/>
 
@@ -85,7 +66,7 @@ Example: `[sd_configurator_button label="My button text" class="myclass other-cl
 4. Copy `docker-compose.template.yml` to `docker-compose.yml`
 5. Create and start the container: `pnpm run wp:start`
 6. Navigate to `http://localhost:8080` and wait until WordPress is running
-7. Uncomment the line in `docker-compose.yml` that mounts the plugin
+7. Uncomment the line that mounts the plugin in `docker-compose.yml`
 8. Restart the container: `pnpm run wp:restart`
 
 In general, whenever you want to refresh the container using local code changes, 
@@ -136,8 +117,3 @@ This project is licensed under the GPL v2 license.
 ## Author
 
 ShapeDiver GmbH
-
-# TODO 
-
-  * Configurator button - feedback in case of configurator not connecting
-  * development mode - possibility to save model state to product
