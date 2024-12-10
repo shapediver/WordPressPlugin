@@ -46,7 +46,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 				embedding_ticket: undefined,
 				model_view_url: undefined,
 				slug: undefined,
-				settings_url: "localtesting.json",
+				settings_url: "example-ecommerce.json",
 			};
 
 		// build configurator url

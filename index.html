@@ -24,11 +24,22 @@
   <body class="shapediver-wordpress-plugin-test-page">
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <div id="configurator-modal" class="modal" style="display: none;">
-      <div class="modal-content">
-        <iframe id="configurator-iframe" src="" frameborder="0"></iframe>
+    <div id="configurator-modal" style="display: none;">
+      <div
+        class="modal-content"
+      >
+        <svg
+          id="app-builder-modal-close-button"
+          viewBox="0 0 10 10"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <line x1="0" y1="0" x2="10" y2="10" stroke="black" />
+          <line x1="10" y1="0" x2="0" y2="10" stroke="black" />
+        </svg>
+        <iframe id="configurator-iframe" src="" frameborder="0" allowfullscreen></iframe>
       </div>
     </div>
+    <button id="sd-open-configurator">Open configurator</button>
     <!--
       This HTML file is a template.
       If you open it directly in the browser, you will see an empty page.

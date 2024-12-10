@@ -6,6 +6,8 @@ The App Builder features of ShapeDiver allow you to create ShapeDiver Apps - fle
 
 Link ShapeDiver Apps to your products and let your customers configure and visualize your products in 3D. If you have configured a ShapeDiver App for a product, it opens as overlay on the product page. Using the custom “Add To Cart” action component for App Builder, users can play with the configurator and add their configured product to the cart.
 
+<img alt="App Builder Overlay Example" src="resources/app_builder_overlay.png" width="640"/>
+
 ## How to use the plugin
 
 Use the plugin manager of WordPress to install the plugin. Although we plan to do so, the plugin is not yet available via the WordPress plugin directory. Therefore please [download](https://github.com/shapediver/WordPressPlugin/releases) the plugin as a zip file, and use `Add New Plugin -> Upload Plugin`. 
@@ -74,6 +76,8 @@ carry out the following steps:
 
 1. Build the plugin: `pnpm run build`
 2. Restart the container: `pnpm run wp:restart`
+
+Hint: The default WordPress user name is `user`, the default password is `bitnami`. 
 
 ### Development Commands
 

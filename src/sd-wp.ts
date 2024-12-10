@@ -30,6 +30,8 @@ const MODAL_ELEMENT_ID = "configurator-modal";
 const IFRAME_ELEMENT_ID = "configurator-iframe";
 /** Id of the button used to open the configurator (display the modal). */
 const OPEN_CONFIGURATOR_BUTTON_ID = "sd-open-configurator";
+/** Id of the button used for closing the configurator modal. */
+const CLOSE_CONFIGURATOR_BUTTON_SELECTOR = "#app-builder-modal-close-button";
 /** Selector for testing whether we are running inside the e-commerce system. */
 const TEST_PAGE_SELECTOR = "body.shapediver-wordpress-plugin-test-page";
 
@@ -158,8 +160,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 		this.configuratorLoader = new WordPressConfiguratorLoader({
 			debug: this.debug,
-			ajaxUrl: this.configuration.ajaxurl,
-			defaultSettingsUrl: this.configuration.settings.default_settings_url,
+			ajaxUrl: this.configuration?.ajaxurl,
+			defaultSettingsUrl: this.configuration?.settings.default_settings_url,
 			closeConfiguratorHandler: () => {
 				this.setConfiguratorVisibility(false);
 				
@@ -205,6 +207,11 @@ class ConfiguratorManager implements IConfiguratorManager {
 		// add event handler for open configurator button
 		document.addEventListener("click", async (event) => {
 			const target = event.target as HTMLElement;
+			if (target.matches(CLOSE_CONFIGURATOR_BUTTON_SELECTOR)) {
+				this.setConfiguratorVisibility(false);
+				
+				return;
+			  }
 			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`))
 				return;
 			event.preventDefault();
@@ -254,10 +261,10 @@ class ConfiguratorManager implements IConfiguratorManager {
 	}
 
 	get baseUrl(): string {
-		const defaultBaseUrl = this.configuration.settings.configurator_url;
+		const defaultBaseUrl = this.configuration?.settings.configurator_url;
 		
 		return defaultBaseUrl ? defaultBaseUrl :
-			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "http://localhost:3000";
+			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "https://appbuilder.shapediver.com/v1/main/latest/";
 	}
 
 	async loadConfigurator(target?: HTMLElement | null): Promise<IECommerceApiConnector | undefined> {

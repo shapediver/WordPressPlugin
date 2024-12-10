@@ -182,6 +182,14 @@ class ShapeDiverConfiguratorPlugin {
         ?>
         <div id="configurator-modal" class="modal" style="display: none;">
             <div class="modal-content">
+                <svg
+                    id="app-builder-modal-close-button"
+                    viewBox="0 0 10 10"
+                    xmlns="http://www.w3.org/2000/svg"
+                >
+                    <line x1="0" y1="0" x2="10" y2="10" stroke="black" />
+                    <line x1="10" y1="0" x2="0" y2="10" stroke="black" />
+                </svg>
                 <iframe id="configurator-iframe" src="" frameborder="0" allowfullscreen></iframe>
             </div>
         </div>
