@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { resolve } from "path";
+import path, {resolve} from "path";
 import { viteStaticCopy } from "vite-plugin-static-copy";
 
 const plugins = [
@@ -40,5 +40,11 @@ export default defineConfig({
 		},
 
 		sourcemap: true
+	},
+	resolve: {
+		alias: {
+			"@AppBuilderShared": path.resolve(__dirname, "./src/shared"),
+			"~": path.resolve(__dirname, "./src"),
+		},
 	},
 });

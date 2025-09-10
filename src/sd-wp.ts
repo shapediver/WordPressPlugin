@@ -17,10 +17,10 @@ along with this program; if not, see <https://www.gnu.org/licenses/>.
 
  */
 
-import { IECommerceApiConnector } from "shared/modules/ecommerce/types/ecommerceapi";
-import { IConfiguratorLoader } from "./modules/configuratormanager/types/loader";
-import { WordPressConfiguratorLoader } from "./modules/wordpressapi/loader";
+import {IECommerceApiConnector} from "shared/modules/ecommerce/types/ecommerceapi";
 import packagejson from "../package.json";
+import {IConfiguratorLoader} from "./modules/configuratormanager/types/loader";
+import {WordPressConfiguratorLoader} from "./modules/wordpressapi/loader";
 
 console.log(`ShapeDiver WordPress Plugin v${packagejson.version}`);
 
@@ -42,74 +42,76 @@ const TOGGLE_CONFIGURATOR_VISIBILITY_MSEC = 750;
 /** Key for toggling configurator visibility. */
 const TOGGLE_CONFIGURATOR_VISIBILITY_KEY = "Escape";
 
-const WC_BLOCK_COMPONENTS_PRODUCT_METADATA_CLASS = "wc-block-components-product-metadata";
-const WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS = "wc-block-components-product-details";
+const WC_BLOCK_COMPONENTS_PRODUCT_METADATA_CLASS =
+	"wc-block-components-product-metadata";
+const WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS =
+	"wc-block-components-product-details";
 
 /**
  * The configurator manager.
  */
 interface IConfiguratorManager {
-
 	/**
-	 * Load the configurator, based on a product id and optional model state id. 
-	 * 
-	 *   * If a target element is provided, try to use its data attributes to get  
+	 * Load the configurator, based on a product id and optional model state id.
+	 *
+	 *   * If a target element is provided, try to use its data attributes to get
 	 *     product id and model state id.
 	 *   * Otherwise, try to get the data from other elements in the DOM.
 	 *   * If a product id is found, load the configurator.
-	 * 
-	 * Note: In case the configurator iframe is hidden, use setConfiguratorVisibility to show it. 
-	 * 
-	 * @param target 
+	 *
+	 * Note: In case the configurator iframe is hidden, use setConfiguratorVisibility to show it.
+	 *
+	 * @param target
 	 */
-	loadConfigurator(target?: HTMLElement | null): Promise<IECommerceApiConnector | undefined>
+	loadConfigurator(
+		target?: HTMLElement | null,
+	): Promise<IECommerceApiConnector | undefined>;
 
 	/**
 	 * Set the visibility of the configurator.
 	 */
-	setConfiguratorVisibility(visible: boolean): void
+	setConfiguratorVisibility(visible: boolean): void;
 
 	/**
 	 * The current visibility of the configurator.
 	 */
-	readonly isConfiguratorVisible: boolean
+	readonly isConfiguratorVisible: boolean;
 
 	/**
-	 * Enable the configurator for the end user. 
+	 * Enable the configurator for the end user.
 	 * This means that the user is shown a button to open the configurator.
 	 */
-	enableConfigurator(): void
+	enableConfigurator(): void;
 
 	/**
 	 * True if the code runs inside the eCommerce environment.
 	 */
-	readonly runsInsideECommerceSystem: boolean
+	readonly runsInsideECommerceSystem: boolean;
 
 	/** Get the configuration object. */
-	readonly configuration: IConfiguration
+	readonly configuration: IConfiguration;
 }
 
 /**
  * Settings of the configurator.
  */
 interface IConfiguration {
-	ajaxurl: string,
-	settings: IPluginSettings
+	ajaxurl: string;
+	settings: IPluginSettings;
 }
 
 /**
  * Global settings of the WordPress plugin.
  */
 interface IPluginSettings {
-	configurator_url: string,
-	default_settings_url: string,
-	debug_flag: string,
-	cart_item_button_label: string,
-	cart_item_button_classes: string,
+	configurator_url: string;
+	default_settings_url: string;
+	debug_flag: string;
+	cart_item_button_label: string;
+	cart_item_button_classes: string;
 }
 
 class ConfiguratorManager implements IConfiguratorManager {
-
 	runsInsideECommerceSystem: boolean;
 
 	private debug: boolean;
@@ -117,7 +119,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 	isConfiguratorVisible: boolean;
 
 	/**
-	 * The element containing the configurator iframe. 
+	 * The element containing the configurator iframe.
 	 * Used to show/hide the configurator.
 	 */
 	private modal: HTMLElement;
@@ -133,13 +135,15 @@ class ConfiguratorManager implements IConfiguratorManager {
 	private configuratorLoader: IConfiguratorLoader;
 
 	constructor() {
-
-		this.runsInsideECommerceSystem = document.querySelector(TEST_PAGE_SELECTOR) === null;
-		this.debug = !this.runsInsideECommerceSystem || this.configuration.settings.debug_flag === "1";
+		this.runsInsideECommerceSystem =
+			document.querySelector(TEST_PAGE_SELECTOR) === null;
+		this.debug =
+			!this.runsInsideECommerceSystem ||
+			this.configuration.settings.debug_flag === "1";
 		if (!this.runsInsideECommerceSystem) {
 			this.log("🚫 Not running inside WordPress");
 		}
-		
+
 		const modal = document.getElementById(MODAL_ELEMENT_ID);
 		if (!modal) {
 			const msg = `ConfiguratorManager: Element with id ${MODAL_ELEMENT_ID} not found.`;
@@ -148,7 +152,9 @@ class ConfiguratorManager implements IConfiguratorManager {
 		}
 		this.modal = modal;
 
-		const iframe = document.getElementById(IFRAME_ELEMENT_ID) as HTMLIFrameElement | null;
+		const iframe = document.getElementById(
+			IFRAME_ELEMENT_ID,
+		) as HTMLIFrameElement | null;
 		if (!iframe) {
 			const msg = `ConfiguratorManager: iframe with id ${IFRAME_ELEMENT_ID} not found.`;
 			this.log(msg);
@@ -161,62 +167,58 @@ class ConfiguratorManager implements IConfiguratorManager {
 		this.configuratorLoader = new WordPressConfiguratorLoader({
 			debug: this.debug,
 			ajaxUrl: this.configuration?.ajaxurl,
-			defaultSettingsUrl: this.configuration?.settings.default_settings_url,
+			defaultSettingsUrl:
+				this.configuration?.settings.default_settings_url,
 			closeConfiguratorHandler: () => {
 				this.setConfiguratorVisibility(false);
-				
+
 				return Promise.resolve(true);
-			}
+			},
 		});
 
 		this.bindEvents();
 
 		// load and enable the configurator on product pages
 		if (document.getElementById(OPEN_CONFIGURATOR_BUTTON_ID)) {
-			this.loadConfigurator()
-				.then((apiConnector) => {
-					(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
-					this.enableConfigurator();
-				});
+			this.loadConfigurator().then((apiConnector) => {
+				(globalThis as {[key: string]: any}).ecommerceApi =
+					apiConnector;
+				this.enableConfigurator();
+			});
 		}
 
 		// Add MutationObserver to watch for cart or mini cart opening
 		this.observeCartChanges();
 	}
-	
+
 	public get configuration(): IConfiguration {
 		return (window as any).configuratorData;
 	}
-	
+
 	setConfiguratorVisibility(visible: boolean): void {
 		this.modal.style.display = visible ? "block" : "none";
 		this.isConfiguratorVisible = visible;
-		if (visible)
-			this.log("🖥️ Configurator modal visible");
-		else
-			this.log("🚪 Configurator modal hidden");
+		if (visible) this.log("🖥️ Configurator modal visible");
+		else this.log("🚪 Configurator modal hidden");
 	}
-	
+
 	log(...message: any[]): void {
-		if (this.debug)
-			console.log("ConfiguratorManager", ...message);
+		if (this.debug) console.log("ConfiguratorManager", ...message);
 	}
 
 	bindEvents() {
-
 		// add event handler for open configurator button
 		document.addEventListener("click", async (event) => {
 			const target = event.target as HTMLElement;
 			if (target.matches(CLOSE_CONFIGURATOR_BUTTON_SELECTOR)) {
 				this.setConfiguratorVisibility(false);
-				
+
 				return;
-			  }
-			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`))
-				return;
+			}
+			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`)) return;
 			event.preventDefault();
 			const apiConnector = await this.loadConfigurator(target);
-			(globalThis as { [key: string]: any }).ecommerceApi = apiConnector;
+			(globalThis as {[key: string]: any}).ecommerceApi = apiConnector;
 			this.setConfiguratorVisibility(true);
 		});
 
@@ -234,12 +236,12 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 		// event handler for toggling configurator visibility
 		let toggleKeyPressCount = 0;
-		let timer : NodeJS.Timeout;
-		
+		let timer: NodeJS.Timeout;
+
 		document.addEventListener("keydown", (event) => {
 			if (event.key === TOGGLE_CONFIGURATOR_VISIBILITY_KEY) {
 				toggleKeyPressCount++;
-		
+
 				if (toggleKeyPressCount === 1) {
 					// Start the timer on the first key press
 					timer = setTimeout(() => {
@@ -247,8 +249,11 @@ class ConfiguratorManager implements IConfiguratorManager {
 						toggleKeyPressCount = 0;
 					}, TOGGLE_CONFIGURATOR_VISIBILITY_MSEC);
 				}
-		
-				if (toggleKeyPressCount === TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS) {
+
+				if (
+					toggleKeyPressCount ===
+					TOGGLE_CONFIGURATOR_VISIBILITY_NUM_EVENTS
+				) {
 					// If the key is pressed X times within Y milliseconds
 					clearTimeout(timer); // Clear the timer to prevent reset
 					this.setConfiguratorVisibility(!this.isConfiguratorVisible); // Call the event handler
@@ -262,43 +267,52 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 	get baseUrl(): string {
 		const defaultBaseUrl = this.configuration?.settings.configurator_url;
-		
-		return defaultBaseUrl ? defaultBaseUrl :
-			this.runsInsideECommerceSystem ? "https://appbuilder.shapediver.com/v1/main/latest/" : "https://appbuilder.shapediver.com/v1/main/latest/";
+
+		return defaultBaseUrl
+			? defaultBaseUrl
+			: this.runsInsideECommerceSystem
+				? "https://appbuilder.shapediver.com/v1/main/latest/"
+				: "https://appbuilder.shapediver.com/v1/main/latest/";
 	}
 
-	async loadConfigurator(target?: HTMLElement | null): Promise<IECommerceApiConnector | undefined> {
-	
+	async loadConfigurator(
+		target?: HTMLElement | null,
+	): Promise<IECommerceApiConnector | undefined> {
 		target = target ?? document.getElementById(OPEN_CONFIGURATOR_BUTTON_ID);
 		const productId = target?.dataset.productId;
 		if (!productId) {
 			this.log("❌ Product id not found");
-			
+
 			return Promise.resolve(undefined);
 		}
 
 		const modelStateId = target?.dataset.modelStateId;
 		const context = target?.dataset.context;
 
-		this.log(`🔓 Opening configurator for productId "${productId}" modelStateId "${modelStateId}" context "${context}"`);
+		this.log(
+			`🔓 Opening configurator for productId "${productId}" modelStateId "${modelStateId}" context "${context}"`,
+		);
 
 		const apiConnector = await this.configuratorLoader.load(this.iframe, {
 			productId,
 			modelStateId,
 			baseUrl: this.baseUrl,
-			context
+			context,
 		});
 
 		return Promise.resolve(apiConnector);
 	}
 
 	enableConfigurator(): void {
-		const openConfiguratorButtons = document.querySelectorAll(`#${OPEN_CONFIGURATOR_BUTTON_ID}`);
+		const openConfiguratorButtons = document.querySelectorAll(
+			`#${OPEN_CONFIGURATOR_BUTTON_ID}`,
+		);
 
 		if (openConfiguratorButtons.length === 0) {
-			this.log(`ConfiguratorManager: No elements with id ${OPEN_CONFIGURATOR_BUTTON_ID} found.`);
-		}
-		else {
+			this.log(
+				`ConfiguratorManager: No elements with id ${OPEN_CONFIGURATOR_BUTTON_ID} found.`,
+			);
+		} else {
 			openConfiguratorButtons.forEach((button) => {
 				if (button instanceof HTMLButtonElement)
 					button.disabled = false;
@@ -310,14 +324,17 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 	/**
 	 * Get the value of a custom data item rendered in the cart.
-	 * @param cartItem 
-	 * @param paramId 
-	 * @returns 
+	 * @param cartItem
+	 * @param paramId
+	 * @returns
 	 */
-	getCartItemValue = (cartItem: Element, paramId: string): string | undefined => {
+	getCartItemValue = (
+		cartItem: Element,
+		paramId: string,
+	): string | undefined => {
 		return cartItem
 			.querySelector(
-				`.${WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS}__${paramId} .${WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS}__value`
+				`.${WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS}__${paramId} .${WC_BLOCK_COMPONENTS_PRODUCT_DETAILS_CLASS}__value`,
 			)
 			?.textContent?.trim();
 	};
@@ -325,15 +342,14 @@ class ConfiguratorManager implements IConfiguratorManager {
 	addConfiguratorButtonsToCartItems(): void {
 		// Find all line item detail elements
 		const cartItems = document.querySelectorAll(
-			`.${WC_BLOCK_COMPONENTS_PRODUCT_METADATA_CLASS}`
+			`.${WC_BLOCK_COMPONENTS_PRODUCT_METADATA_CLASS}`,
 		);
 
 		// Convert NodeList to Array and iterate
 		Array.from(cartItems).forEach((cartItem) => {
-			
 			// Check if a button already exists inside the product element
 			const existingButton = cartItem.parentElement?.querySelector(
-				`#${OPEN_CONFIGURATOR_BUTTON_ID}`
+				`#${OPEN_CONFIGURATOR_BUTTON_ID}`,
 			);
 
 			if (existingButton) {
@@ -341,19 +357,26 @@ class ConfiguratorManager implements IConfiguratorManager {
 			}
 
 			// get data from the cart item
-			const modelStateId = this.getCartItemValue(cartItem, "configuration-id");
+			const modelStateId = this.getCartItemValue(
+				cartItem,
+				"configuration-id",
+			);
 			const productId = this.getCartItemValue(cartItem, "product-id");
 
 			if (!modelStateId || !productId) {
 				return;
 			}
-			
+
 			// Create a new button element
 			const button = document.createElement("button");
 
-			button.textContent = this.configuration.settings.cart_item_button_label;
+			button.textContent =
+				this.configuration.settings.cart_item_button_label;
 			button.setAttribute("id", OPEN_CONFIGURATOR_BUTTON_ID);
-			button.setAttribute("class", this.configuration.settings.cart_item_button_classes);
+			button.setAttribute(
+				"class",
+				this.configuration.settings.cart_item_button_classes,
+			);
 			button.setAttribute("data-model-state-id", modelStateId);
 			button.setAttribute("data-product-id", productId);
 			button.setAttribute("data-context", "cart");
@@ -366,28 +389,33 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 	/**
 	 * Check if the cart or mini cart or the order summary is part of the DOM.
-	 * @returns 
+	 * @returns
 	 */
 	cartIsPartOfDom(): boolean {
 		return (
 			// Check for the presence of the mini cart
-			document.querySelector(".wp-block-woocommerce-mini-cart-items-block") !==
-				null ||
+			document.querySelector(
+				".wp-block-woocommerce-mini-cart-items-block",
+			) !== null ||
 			// Check for the presence of cart
 			document.querySelector(".wc-block-cart-items") !== null ||
 			// Check for the presence order summary shown on the checkout page
-			document.querySelector(".wc-block-components-order-summary") !== null
+			document.querySelector(".wc-block-components-order-summary") !==
+				null
 		);
 	}
 
 	/**
-	 * List for DOM mutations to detect the presence of the cart or mini cart. 
+	 * List for DOM mutations to detect the presence of the cart or mini cart.
 	 * If so, add configurator buttons to cart items.
 	 */
 	observeCartChanges(): void {
 		const observer = new MutationObserver((mutations) => {
 			mutations.forEach((mutation) => {
-				if (mutation.type === "childList" || mutation.type === "attributes") {
+				if (
+					mutation.type === "childList" ||
+					mutation.type === "attributes"
+				) {
 					if (this.cartIsPartOfDom()) {
 						this.addConfiguratorButtonsToCartItems();
 					}
@@ -411,4 +439,4 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 const configuratorManager = new ConfiguratorManager();
 
-(globalThis as { [key: string]: any }).configuratorManager = configuratorManager;
+(globalThis as {[key: string]: any}).configuratorManager = configuratorManager;

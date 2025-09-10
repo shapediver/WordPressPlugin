@@ -1,32 +1,42 @@
-import { IWordpressApi, IWordpressApiOptions, IWordPressECommerceApiActionsOptions } from "./types/api";
-import { IWordpressAddToCartRequest, IWordpressGetProductDataRequest, WordPressAjaxRequestType } from "./types/request";
+import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/types/shapediver/queryparams";
+import {
+	IAddItemToCartData,
+	IAddItemToCartReply,
+	IECommerceApiActions,
+	IGetParentPageInfoReply,
+	IGetUserProfileReply,
+	IUpdateSharingLinkData,
+	IUpdateSharingLinkReply,
+} from "../../shared/modules/ecommerce/types/ecommerceapi";
+import {
+	IWordpressApi,
+	IWordpressApiOptions,
+	IWordPressECommerceApiActionsOptions,
+} from "./types/api";
+import {
+	IWordpressAddToCartRequest,
+	IWordpressGetProductDataRequest,
+	WordPressAjaxRequestType,
+} from "./types/request";
+import {
+	IWordpressAddToCartResponse,
+	IWordpressGetCartResponse,
+	IWordpressGetProductDataResponse,
+	IWordpressGetUserProfileResponse,
+} from "./types/response";
 import {
 	IWordpressAddToCartResponseSchema,
 	IWordpressGetCartResponseSchema,
 	IWordpressGetProductDataResponseSchema,
 	IWordpressGetUserProfileResponseSchema,
 } from "./types/responsetypecheck";
-import { 
-	IWordpressGetProductDataResponse, 
-	IWordpressGetUserProfileResponse, 
-	IWordpressGetCartResponse, 
-	IWordpressAddToCartResponse 
-} from "./types/response";
-import { 
-	IAddItemToCartData,
-	IAddItemToCartReply,
-	IECommerceApiActions,
-	IGetParentPageInfoReply,
-	IGetUserProfileReply,
-} from "../../shared/modules/ecommerce/types/ecommerceapi";
 
 interface IWordPressAjaxResponse<T> {
-    success: boolean
-    data?: T
+	success: boolean;
+	data?: T;
 }
 
 export class WordpressApi implements IWordpressApi {
-
 	private ajaxurl: string;
 	private debug: boolean;
 
@@ -36,37 +46,36 @@ export class WordpressApi implements IWordpressApi {
 	}
 
 	async request<Trequest extends WordPressAjaxRequestType, Tresponse>(
-		method: string, 
-		action: string, 
-		request: Trequest extends any[] ? never : Trequest
+		method: string,
+		action: string,
+		request: Trequest extends any[] ? never : Trequest,
 	): Promise<Tresponse> {
-
 		// transform request object: any property that is not a primitive must be JSON stringified
 		const _request: WordPressAjaxRequestType = {};
 		for (const key in request) {
-			if ( key === "action" )
-				throw new Error("The request object cannot contain a property named 'action'");
+			if (key === "action")
+				throw new Error(
+					"The request object cannot contain a property named 'action'",
+				);
 
 			const value = request[key];
 			if (typeof value === "object" && value !== null) {
 				_request[key] = JSON.stringify(value);
-			}
-			else if (value !== undefined) {
+			} else if (value !== undefined) {
 				_request[key] = value;
 			}
 		}
 
 		const response = await fetch(this.ajaxurl, {
-    
 			method,
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded",
 			},
 			body: new URLSearchParams({
-				// CAUTION: This can easily lead to trouble if the request object 
+				// CAUTION: This can easily lead to trouble if the request object
 				// includes a property named "action". Therefore checking for this above.
 				action,
-				..._request
+				..._request,
 			}),
 		});
 
@@ -79,7 +88,8 @@ export class WordpressApi implements IWordpressApi {
 		}
 
 		// TODO validate response using a zod schema
-		const ajaxResponse = await response.json() as IWordPressAjaxResponse<Tresponse>;
+		const ajaxResponse =
+			(await response.json()) as IWordPressAjaxResponse<Tresponse>;
 
 		if (!ajaxResponse.success) {
 			const msg = `WordpressApiError: ${JSON.stringify(ajaxResponse, null, 0)}`;
@@ -98,72 +108,108 @@ export class WordpressApi implements IWordpressApi {
 
 	log(...message: any[]): void {
 		if (this.debug)
-			console.log(`WordpressApi (ajaxurl = "${this.ajaxurl}"):`, ...message);
+			console.log(
+				`WordpressApi (ajaxurl = "${this.ajaxurl}"):`,
+				...message,
+			);
 	}
 
-	async getProductData(id: number): Promise<IWordpressGetProductDataResponse> {
-		const data = await this.request<IWordpressGetProductDataRequest, IWordpressGetProductDataResponse>("POST", "get_product_data", { product_id: id });
-		
+	async getProductData(
+		id: number,
+	): Promise<IWordpressGetProductDataResponse> {
+		const data = await this.request<
+			IWordpressGetProductDataRequest,
+			IWordpressGetProductDataResponse
+		>("POST", "get_product_data", {product_id: id});
+
 		return IWordpressGetProductDataResponseSchema.parse(data);
 	}
 
 	async getUserProfile(): Promise<IWordpressGetUserProfileResponse> {
-		const data = await this.request<WordPressAjaxRequestType, IWordpressGetUserProfileResponse>("POST", "get_user_profile", {});
-		
+		const data = await this.request<
+			WordPressAjaxRequestType,
+			IWordpressGetUserProfileResponse
+		>("POST", "get_user_profile", {});
+
 		return IWordpressGetUserProfileResponseSchema.parse(data);
 	}
 
 	async getCart(): Promise<IWordpressGetCartResponse> {
-		const data = await this.request<WordPressAjaxRequestType, IWordpressGetCartResponse>("POST", "get_cart", {});
-		
+		const data = await this.request<
+			WordPressAjaxRequestType,
+			IWordpressGetCartResponse
+		>("POST", "get_cart", {});
+
 		return IWordpressGetCartResponseSchema.parse(data);
 	}
 
-	async addToCart(request: IWordpressAddToCartRequest): Promise<IWordpressAddToCartResponse> {
-		const data = await this.request<IWordpressAddToCartRequest, IWordpressAddToCartResponse>("POST", "add_to_cart", request);
-		
+	async addToCart(
+		request: IWordpressAddToCartRequest,
+	): Promise<IWordpressAddToCartResponse> {
+		const data = await this.request<
+			IWordpressAddToCartRequest,
+			IWordpressAddToCartResponse
+		>("POST", "add_to_cart", request);
+
 		return IWordpressAddToCartResponseSchema.parse(data);
 	}
-    
 }
 
 /**
  * Implementation of the e-commerce API actions for WordPress.
  */
 export class WordPressECommerceApiActions implements IECommerceApiActions {
-
 	private wordpressApi: IWordpressApi;
 	private options: IWordPressECommerceApiActionsOptions;
 	private debug: boolean;
 
-	constructor(wordpressApi: IWordpressApi, options: IWordPressECommerceApiActionsOptions) {
+	constructor(
+		wordpressApi: IWordpressApi,
+		options: IWordPressECommerceApiActionsOptions,
+	) {
 		this.wordpressApi = wordpressApi;
 		this.options = options;
 		this.debug = options.debug ?? false;
+	}
+
+	updateSharingLink(
+		data: IUpdateSharingLinkData,
+	): Promise<IUpdateSharingLinkReply> {
+		const {modelStateId} = data;
+		const url = new URL(window.location.href);
+		url.searchParams.set(QUERYPARAM_MODELSTATEID, modelStateId);
+		const href = url.toString();
+		history.replaceState(history.state, "", href);
+		return Promise.resolve({href});
 	}
 
 	async closeConfigurator(): Promise<boolean> {
 		if (this.options.closeConfiguratorHandler) {
 			return await this.options.closeConfiguratorHandler();
 		}
-		
+
 		return false;
 	}
 
 	log(...message: any[]): void {
 		if (this.debug)
-			console.log(`WordPressECommerceApiActions (options = "${this.options}"):`, ...message);
+			console.log(
+				`WordPressECommerceApiActions (options = "${this.options}"):`,
+				...message,
+			);
 	}
 
-	async addItemToCart(data: IAddItemToCartData): Promise<IAddItemToCartReply> {
-        
+	async addItemToCart(
+		data: IAddItemToCartData,
+	): Promise<IAddItemToCartReply> {
 		let product_id: number = this.options.productId;
 		if (data.productId) {
 			try {
 				product_id = parseInt(data.productId);
-			}
-			catch (e) {
-				throw new Error(`Could not parse productId "${data.productId}" to an integer: ${e}`);
+			} catch (e) {
+				throw new Error(
+					`Could not parse productId "${data.productId}" to an integer: ${e}`,
+				);
 			}
 		}
 
@@ -176,20 +222,23 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 				model_state_id: data.modelStateId,
 				// TODO Juan please implement to use the description when displaying the cart
 				description: data.description,
-			}
+			},
 		};
-        
+
 		const result = await this.wordpressApi.addToCart(request);
 
 		// map response
 
 		// The ajax handler returns an object without a cart_item_key property in case of error.
-		if (typeof result.cart_item_key !== "string" || result.cart_item_key.length === 0) {
+		if (
+			typeof result.cart_item_key !== "string" ||
+			result.cart_item_key.length === 0
+		) {
 			throw new Error(result.message ?? "Unknown error");
 		}
 
 		return {
-			id: result.cart_item_key
+			id: result.cart_item_key,
 		};
 	}
 
@@ -198,15 +247,13 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 
 		// map response
 		return {
-			id: result.id+"",
+			id: result.id + "",
 			email: result.email,
-			name: result.name
+			name: result.name,
 		};
 	}
 
 	async getParentPageInfo(): Promise<IGetParentPageInfoReply> {
-		return Promise.resolve({ href: window.location.href });
+		return Promise.resolve({href: window.location.href});
 	}
-
 }
-

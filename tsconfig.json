@@ -6,6 +6,14 @@
       "vite/client",
       "node"
     ],
+    "paths": {
+      "@AppBuilderShared/*": [
+        "./shared/*"
+      ],
+      "~/*": [
+        "./*"
+      ]
+    },
     "lib": [
       "dom",
       "dom.iterable",

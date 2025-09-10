@@ -2,6 +2,8 @@
   "name": "shapediver-wordpress-plugin",
   "version": "1.6.0",
   "description": "ShapeDiver WordPress Plugin",
+  "author": "ShapeDiver GmbH",
+  "license": "GPL-2.0-or-later",
   "type": "module",
   "scripts": {
     "wp:start": "docker-compose up -d",
@@ -14,22 +16,33 @@
     "start": "vite",
     "optimize": "tsc && vite optimize --force && ./build.sh",
     "eslint": "eslint .",
+    "prettier": "prettier --write ./src/modules ./src/sd-wp.ts ./src/sd-wp.css",
     "submodule": "git submodule update --init --recursive"
   },
-  "author": "ShapeDiver GmbH",
-  "license": "GPL-2.0-or-later",
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.11.1",
-    "@types/node": "20",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.35.0",
+    "@types/node": "^20.17.19",
     "@types/post-robot": "^10.0.6",
-    "@typescript-eslint/eslint-plugin": "^8.8.0",
-    "@typescript-eslint/parser": "^8.8.0",
-    "eslint": "^9.11.1",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "eslint-config-prettier": "^10.0.2",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-react": "^7.37.4",
     "globals": "^15.10.0",
-    "typescript": "^5.5.4",
-    "vite": "^5.4.3",
-    "vite-plugin-static-copy": "^1.0.6"
+    "prettier": "^3.5.2",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
+    "vite-bundle-analyzer": "^0.18.1",
+    "vite-plugin-static-copy": "^1.0.6",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
     "post-robot": "^8.0.32",
