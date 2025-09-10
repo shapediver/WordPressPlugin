@@ -4,7 +4,6 @@ import js from "@eslint/js";
 import typescriptEslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import prettier from "eslint-plugin-prettier";
-import react from "eslint-plugin-react";
 import globals from "globals";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
@@ -37,7 +36,6 @@ export default [
 	...compat.extends(
 		"eslint:recommended",
 		"plugin:@typescript-eslint/recommended",
-		"plugin:react/recommended",
 		"plugin:prettier/recommended",
 		"prettier",
 	),
@@ -46,7 +44,6 @@ export default [
 	{
 		plugins: {
 			"@typescript-eslint": typescriptEslint,
-			react,
 			prettier,
 		},
 
@@ -59,11 +56,7 @@ export default [
 			},
 		},
 
-		settings: {
-			react: {
-				version: "detect",
-			},
-		},
+		settings: {},
 
 		rules: {
 			"prettier/prettier": "error",
