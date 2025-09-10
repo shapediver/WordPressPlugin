@@ -1,20 +1,24 @@
-import { defineConfig } from "vite";
 import path, {resolve} from "path";
-import { viteStaticCopy } from "vite-plugin-static-copy";
+import {defineConfig} from "vite";
+import {viteStaticCopy} from "vite-plugin-static-copy";
 
 const plugins = [
 	viteStaticCopy({
-		targets: [{
-			src: "src/sd-wp.css", // Specify the path to your CSS file
-			dest: "" // Leave blank or specify folder inside 'dist' if you want to copy into a subfolder
-		},  {
-			src: "src/sd-wp.php",
-			dest: ""
-		},  {
-			src: "LICENSE",
-			dest: ""
-		}]
-	})
+		targets: [
+			{
+				src: "src/sd-wp.css", // Specify the path to your CSS file
+				dest: "", // Leave blank or specify folder inside 'dist' if you want to copy into a subfolder
+			},
+			{
+				src: "src/sd-wp.php",
+				dest: "",
+			},
+			{
+				src: "LICENSE",
+				dest: "",
+			},
+		],
+	}),
 ];
 
 // https://vitejs.dev/config/
@@ -36,10 +40,10 @@ export default defineConfig({
 				entryFileNames: "sd-wp.js", // Your custom filename here
 				// Ensures all output is bundled into a single file
 				manualChunks: undefined, // Disable code-splitting to bundle everything in one file
-			}
+			},
 		},
 
-		sourcemap: true
+		sourcemap: true,
 	},
 	resolve: {
 		alias: {
