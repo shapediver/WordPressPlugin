@@ -16,7 +16,7 @@
     "start": "vite",
     "optimize": "tsc && vite optimize --force && ./build.sh",
     "eslint": "eslint .",
-    "prettier": "prettier --write ./src/modules ./src/sd-wp.ts ./src/sd-wp.css ./vite.config.ts",
+    "prettier": "prettier --write ./src/modules ./src/sd-wp.ts ./src/sd-wp.css ./vite.config.ts ./eslint.config.mjs",
     "submodule": "git submodule update --init --recursive"
   },
   "eslintConfig": {
