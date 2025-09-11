@@ -198,7 +198,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 				this.enableConfigurator();
 				// If there is a "modelStateId" query string parameter, show the configurator right away.
 				if (this.modelStateIdFromUrl) {
-				this.setConfiguratorVisibility(true);
+					this.setConfiguratorVisibility(true);
 				}
 			});
 		}
