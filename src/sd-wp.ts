@@ -17,7 +17,8 @@ along with this program; if not, see <https://www.gnu.org/licenses/>.
 
  */
 
-import {IECommerceApiConnector} from "shared/modules/ecommerce/types/ecommerceapi";
+import {IECommerceApiConnector} from "@AppBuilderShared/modules/ecommerce/types/ecommerceapi";
+import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/types/shapediver/queryparams";
 import packagejson from "../package.json";
 import {IConfiguratorLoader} from "./modules/configuratormanager/types/loader";
 import {WordPressConfiguratorLoader} from "./modules/wordpressapi/loader";
@@ -25,11 +26,11 @@ import {WordPressConfiguratorLoader} from "./modules/wordpressapi/loader";
 console.log(`ShapeDiver WordPress Plugin v${packagejson.version}`);
 
 /** Id of the div representing the configurator modal. */
-const MODAL_ELEMENT_ID = "configurator-modal";
+const MODAL_ELEMENT_ID = "app-builder-modal-wrapper";
 /** Id of the iframe hosting the configurator. */
-const IFRAME_ELEMENT_ID = "configurator-iframe";
+const IFRAME_ELEMENT_ID = "app-builder-iframe";
 /** Id of the button used to open the configurator (display the modal). */
-const OPEN_CONFIGURATOR_BUTTON_ID = "sd-open-configurator";
+const OPEN_CONFIGURATOR_BUTTON_ID = "app-builder-open-configurator";
 /** Id of the button used for closing the configurator modal. */
 const CLOSE_CONFIGURATOR_BUTTON_SELECTOR = "#app-builder-modal-close-button";
 /** Selector for testing whether we are running inside the e-commerce system. */
@@ -134,6 +135,11 @@ class ConfiguratorManager implements IConfiguratorManager {
 	 */
 	private configuratorLoader: IConfiguratorLoader;
 
+	/**
+	 * Model state ID according to the URL query string.
+	 */
+	private modelStateIdFromUrl: string | null = null;
+
 	constructor() {
 		this.runsInsideECommerceSystem =
 			document.querySelector(TEST_PAGE_SELECTOR) === null;
@@ -176,6 +182,12 @@ class ConfiguratorManager implements IConfiguratorManager {
 			},
 		});
 
+		// check for modelStateId in URL
+		const url = new URL(window.location.href);
+		this.modelStateIdFromUrl = url.searchParams.get(
+			QUERYPARAM_MODELSTATEID,
+		);
+
 		this.bindEvents();
 
 		// load and enable the configurator on product pages
@@ -184,6 +196,10 @@ class ConfiguratorManager implements IConfiguratorManager {
 				(globalThis as {[key: string]: any}).ecommerceApi =
 					apiConnector;
 				this.enableConfigurator();
+				// If there is a "modelStateId" query string parameter, show the configurator right away.
+				if (this.modelStateIdFromUrl) {
+				this.setConfiguratorVisibility(true);
+				}
 			});
 		}
 
@@ -206,20 +222,34 @@ class ConfiguratorManager implements IConfiguratorManager {
 		if (this.debug) console.log("ConfiguratorManager", ...message);
 	}
 
-	bindEvents() {
-		// add event handler for open configurator button
-		document.addEventListener("click", async (event) => {
-			const target = event.target as HTMLElement;
-			if (target.matches(CLOSE_CONFIGURATOR_BUTTON_SELECTOR)) {
-				this.setConfiguratorVisibility(false);
+	handleCloseConfigurator(event: MouseEvent): boolean | undefined {
+		if (!event.target) return;
+		const target = event.target as HTMLElement;
+		if (target.closest(CLOSE_CONFIGURATOR_BUTTON_SELECTOR)) {
+			this.setConfiguratorVisibility(false);
+			return true;
+		}
+	}
 
-				return;
-			}
-			if (!target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`)) return;
+	async handleOpenConfigurator(
+		event: MouseEvent,
+	): Promise<boolean | undefined> {
+		if (!event.target) return;
+		const target = event.target as HTMLElement;
+		if (target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`)) {
 			event.preventDefault();
 			const apiConnector = await this.loadConfigurator(target);
 			(globalThis as {[key: string]: any}).ecommerceApi = apiConnector;
 			this.setConfiguratorVisibility(true);
+			return true;
+		}
+	}
+
+	bindEvents() {
+		// add event handler for open configurator button
+		document.addEventListener("click", async (event) => {
+			if (this.handleCloseConfigurator(event)) return;
+			if (await this.handleOpenConfigurator(event)) return;
 		});
 
 		// in local development mode, load a dummy configurator right away
@@ -286,8 +316,15 @@ class ConfiguratorManager implements IConfiguratorManager {
 			return Promise.resolve(undefined);
 		}
 
-		const modelStateId = target?.dataset.modelStateId;
+		const modelStateId =
+			this.modelStateIdFromUrl ?? target?.dataset.modelStateId;
 		const context = target?.dataset.context;
+
+		if (this.modelStateIdFromUrl) {
+			this.log(
+				`🔍 Using modelStateId "${this.modelStateIdFromUrl}" defined in URL`,
+			);
+		}
 
 		this.log(
 			`🔓 Opening configurator for productId "${productId}" modelStateId "${modelStateId}" context "${context}"`,

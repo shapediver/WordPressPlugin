@@ -20,7 +20,7 @@ define('SHAPEDIVER_PLUGIN_VERSION', '1.0.0');
 define('SHAPEDIVER_PRODUCT_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-product-button');
 define('SHAPEDIVER_CART_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button');
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button');
-define('SHAPEDIVER_BUTTON_ID', 'sd-open-configurator');
+define('SHAPEDIVER_BUTTON_ID', 'app-builder-open-configurator');
 define('SHAPEDIVER_APP_BUILDER_URL', 'https://appbuilder.shapediver.com/v1/main/latest/');
 define('SHAPEDIVER_PRODUCT_BUTTON_LABEL', 'Customize'); // Default label for the configurator button on the product page
 define('SHAPEDIVER_CART_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for cart items
@@ -180,17 +180,20 @@ class ShapeDiverConfiguratorPlugin {
     // Add modal for configurator iframe
     public function add_configurator_modal() {
         ?>
-        <div id="configurator-modal" class="modal" style="display: none;">
-            <div class="modal-content">
+        <div id="app-builder-modal-wrapper" class="modal" style="display: none;">
+            <div id="app-builder-modal-content">
                 <svg
                     id="app-builder-modal-close-button"
-                    viewBox="0 0 10 10"
+                    viewBox="0 0 20 20"
                     xmlns="http://www.w3.org/2000/svg"
                 >
-                    <line x1="0" y1="0" x2="10" y2="10" stroke="black" />
-                    <line x1="10" y1="0" x2="0" y2="10" stroke="black" />
+                    <circle cx="10" cy="10" r="10" fill="white" />
+                    <circle cx="10" cy="10" r="9" fill="black" />
+                    <circle cx="10" cy="10" r="8" fill="white" />
+                    <line x1="5" y1="5" x2="15" y2="15" stroke="black" />
+                    <line x1="15" y1="5" x2="5" y2="15" stroke="black" />
                 </svg>
-                <iframe id="configurator-iframe" src="" frameborder="0" allowfullscreen></iframe>
+                <iframe id="app-builder-iframe" src="" frameborder="0" allowfullscreen></iframe>
             </div>
         </div>
         <?php
