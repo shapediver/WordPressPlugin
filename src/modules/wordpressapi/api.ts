@@ -4,9 +4,7 @@ import {
 	IECommerceApiActions,
 	IGetParentPageInfoReply,
 	IGetUserProfileReply,
-	IScrollingApiLoadMoreData,
 	IScrollingApiLoadMoreReply,
-	IScrollingApiSetParametersData,
 	IScrollingApiSetParametersReply,
 	IUpdateSharingLinkData,
 	IUpdateSharingLinkReply,
@@ -176,26 +174,14 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 		this.debug = options.debug ?? false;
 	}
 
-	async scrollingApiSetParameters(
-		data: IScrollingApiSetParametersData,
-	): Promise<IScrollingApiSetParametersReply<unknown>> {
-		if (
-			!("scrollingApiSetParameters" in window) ||
-			typeof window.scrollingApiSetParameters !== "function"
-		)
-			return {hasNextPage: false, items: []};
-		return window.scrollingApiSetParameters(data);
+	async scrollingApiSetParameters() /*data: IScrollingApiSetParametersData,*/
+	: Promise<IScrollingApiSetParametersReply<unknown>> {
+		return {hasNextPage: false, items: []};
 	}
 
-	async scrollingApiLoadMore(
-		data: IScrollingApiLoadMoreData,
-	): Promise<IScrollingApiLoadMoreReply<unknown>> {
-		if (
-			!("scrollingApiLoadMore" in window) ||
-			typeof window.scrollingApiLoadMore !== "function"
-		)
-			return {hasNextPage: false, items: []};
-		return window.scrollingApiLoadMore(data);
+	async scrollingApiLoadMore() /*data: IScrollingApiLoadMoreData,*/
+	: Promise<IScrollingApiLoadMoreReply<unknown>> {
+		return {hasNextPage: false, items: []};
 	}
 
 	updateSharingLink(
