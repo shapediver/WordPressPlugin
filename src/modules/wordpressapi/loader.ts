@@ -38,7 +38,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 	): Promise<IECommerceApiConnector | undefined> {
 		this.log("🚀 Loading configurator", options);
 		// get product data, or use dummy data for local testing
-		const {productId, context} = options;
+		const {productId, context, urlBuilderOptions, apiActions} = options;
 		const productData = this.wordpressApi
 			? await this.wordpressApi.getProductData(parseInt(productId))
 			: // in local development mode, use dummy data
@@ -58,17 +58,19 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 		const modelStateId = options.modelStateId
 			? options.modelStateId
 			: productData.model_state_id;
-		const url = buildAppBuilderUrl({
-			baseUrl,
-			ticket: productData.embedding_ticket,
-			modelViewUrl: productData.model_view_url,
-			slug: productData.slug,
-			modelStateId,
-			settingsUrl: productData.settings_url
-				? productData.settings_url
-				: this.options.defaultSettingsUrl,
-			context,
-		});
+		const url = buildAppBuilderUrl(
+			urlBuilderOptions ?? {
+				baseUrl,
+				ticket: productData.embedding_ticket,
+				modelViewUrl: productData.model_view_url,
+				slug: productData.slug,
+				modelStateId,
+				settingsUrl: productData.settings_url
+					? productData.settings_url
+					: this.options.defaultSettingsUrl,
+				context,
+			},
+		);
 
 		// do nothing if the URL didn't change
 		if (url === iframe.src) return;
@@ -78,15 +80,17 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 				this.log("iframe loaded:", iframe);
 
 				// create ecommerce api actions
-				const actions = this.wordpressApi
-					? new WordPressECommerceApiActions(this.wordpressApi, {
-							productId: parseInt(productId),
-							modelStateId,
-							debug: this.debug,
-							closeConfiguratorHandler:
-								this.options.closeConfiguratorHandler,
-						})
-					: new DummyECommerceApiActions();
+				const actions =
+					apiActions ??
+					(this.wordpressApi
+						? new WordPressECommerceApiActions(this.wordpressApi, {
+								productId: parseInt(productId),
+								modelStateId,
+								debug: this.debug,
+								closeConfiguratorHandler:
+									this.options.closeConfiguratorHandler,
+							})
+						: new DummyECommerceApiActions());
 
 				// create ecommerce api
 				const api = await ECommerceApiFactory.getConnectorApi(

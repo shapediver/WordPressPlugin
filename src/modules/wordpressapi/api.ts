@@ -1,13 +1,17 @@
-import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/types/shapediver/queryparams";
 import {
 	IAddItemToCartData,
 	IAddItemToCartReply,
 	IECommerceApiActions,
 	IGetParentPageInfoReply,
 	IGetUserProfileReply,
+	IScrollingApiLoadMoreData,
+	IScrollingApiLoadMoreReply,
+	IScrollingApiSetParametersData,
+	IScrollingApiSetParametersReply,
 	IUpdateSharingLinkData,
 	IUpdateSharingLinkReply,
-} from "../../shared/modules/ecommerce/types/ecommerceapi";
+} from "@AppBuilderShared/modules/ecommerce/types/ecommerceapi";
+import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/types/shapediver/queryparams";
 import {
 	IWordpressApi,
 	IWordpressApiOptions,
@@ -170,6 +174,28 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 		this.wordpressApi = wordpressApi;
 		this.options = options;
 		this.debug = options.debug ?? false;
+	}
+
+	async scrollingApiSetParameters(
+		data: IScrollingApiSetParametersData,
+	): Promise<IScrollingApiSetParametersReply<unknown>> {
+		if (
+			!("scrollingApiSetParameters" in window) ||
+			typeof window.scrollingApiSetParameters !== "function"
+		)
+			return {hasNextPage: false, items: []};
+		return window.scrollingApiSetParameters(data);
+	}
+
+	async scrollingApiLoadMore(
+		data: IScrollingApiLoadMoreData,
+	): Promise<IScrollingApiLoadMoreReply<unknown>> {
+		if (
+			!("scrollingApiLoadMore" in window) ||
+			typeof window.scrollingApiLoadMore !== "function"
+		)
+			return {hasNextPage: false, items: []};
+		return window.scrollingApiLoadMore(data);
 	}
 
 	updateSharingLink(

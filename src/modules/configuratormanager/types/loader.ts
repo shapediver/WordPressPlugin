@@ -1,4 +1,8 @@
-import {IECommerceApiConnector} from "shared/modules/ecommerce/types/ecommerceapi";
+import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/utils/urlbuilder";
+import {
+	IECommerceApiActions,
+	IECommerceApiConnector,
+} from "shared/modules/ecommerce/types/ecommerceapi";
 
 /**
  * Options for loading a configurator.
@@ -28,6 +32,18 @@ export interface IConfiguratorLoaderOptions {
 	 *   * "order" (opened from an order)
 	 */
 	context?: string;
+
+	/**
+	 * Optional settings for building the configurator URL. If provided these
+	 * options override the other settings provided as part of this objects,
+	 * as well as any settings configured for the product in WordPress.
+	 */
+	urlBuilderOptions?: IAppBuilderUrlBuilderData;
+
+	/**
+	 * Optional API actions to use instead of the default WordPressECommerceApiActions.
+	 */
+	apiActions?: IECommerceApiActions;
 }
 
 /**
