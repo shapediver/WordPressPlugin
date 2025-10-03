@@ -13,6 +13,7 @@
     "wp:reset": "docker-compose down -v && docker-compose up -d",
     "wp:status": "docker-compose ps",
     "build": "tsc && vite build && ./build.sh",
+    "deploy-test": "./deploy-test.sh wp/v1/main",
     "start": "vite",
     "optimize": "tsc && vite optimize --force && ./build.sh",
     "eslint": "eslint .",
