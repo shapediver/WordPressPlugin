@@ -114,6 +114,12 @@ To build the plugin for production:
 
 The resulting zip file can be found in the project root directory.
 
+## Project-specific handler implementations
+
+In case you need to implement custom handlers for the actions that the app running inside 
+the iframe may call, check out [src/sd-specific.example.ts](src/sd-specific.example.ts) on
+how to implement your custom handlers.
+
 ## License
 
 This project is licensed under the GPL v2 license.
