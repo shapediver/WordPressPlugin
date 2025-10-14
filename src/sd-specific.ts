@@ -40,9 +40,13 @@ interface IProduct {
 	description: string;
 	category_id: number;
 	category_name: string;
-	thumbnail: string;
 	tags: string[];
-	downloadable_files: {name: string; url: string}[];
+	downloadable_files: {
+		name: string;
+		image_type: "thumbnail" | string;
+		image_png_url?: string;
+		image_jpg_url?: string;
+	}[];
 }
 
 /**
@@ -115,7 +119,8 @@ async function fetchFromGraphicsApi(
 		return cachedResults[queryString];
 	}
 
-	const base = "https://tarablooms.in/wp-json/custom/v1/graphic-components";
+	const base =
+		"https://dev1.tarablooms.in/wp-json/custom/v1/graphic-components";
 
 	const url = `${base}?${queryString}`;
 
@@ -168,7 +173,9 @@ function returnAndMapCachedResults(): IScrollingApiLoadMoreReply<unknown> {
 				data: {
 					displayname: p.graphic_name,
 					tooltip: p.description,
-					imageUrl: p.thumbnail,
+					imageUrl: p.downloadable_files.find(
+						(f) => f.image_type === "thumbnail",
+					)?.image_png_url,
 					data: p,
 				},
 			}));
@@ -236,10 +243,21 @@ async function scrollingApiSetParameters(
 		let categories: string[] = [];
 		let tags: string = "";
 		let search: string = "";
+		let cachedCategories = cachedResults[latestQuery].categories;
 		data.terms?.forEach((v) => {
 			if (v.startsWith("category:")) {
-				if (!categories) categories = [];
-				categories.push(v.substring("category:".length));
+				if (cachedCategories) {
+					const categoryName = v.substring("category:".length);
+					// Check if the category exists in the fetched categories
+					const matchedCategory = cachedCategories.find(
+						(cat) => cat.name === categoryName,
+					);
+					if (matchedCategory) {
+						if (!categories) categories = [];
+						categories.push(matchedCategory.slug);
+						cachedCategories = matchedCategory.children;
+					}
+				}
 			} else if (v.startsWith("tag:")) tags = v.substring("tag:".length);
 			else search = v;
 		});
