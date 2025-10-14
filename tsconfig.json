@@ -37,6 +37,7 @@
     "sourceMap": true
   },
   "include": [
-    "src/sd-wp.ts"
+    "src/sd-wp.ts",
+    "src/sd-specific.ts",
   ]
 }

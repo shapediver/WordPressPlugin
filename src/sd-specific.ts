@@ -1,6 +1,7 @@
 import {
 	QUERYPARAM_MODELSTATEID,
 	QUERYPARAM_SETTINGSURL,
+	QUERYPARAM_SLUG,
 } from "@AppBuilderShared/types/shapediver/queryparams";
 import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/utils/urlbuilder";
 import {
@@ -357,6 +358,7 @@ export const developmentUrlBuilderOptions: IAppBuilderUrlBuilderData = {
 	baseUrl: `https://appbuilder.shapediver.com/v1/main/${urlParams.get("appBuilderVersion") ?? "development"}/`,
 	settingsUrl: urlParams.get(QUERYPARAM_SETTINGSURL) ?? "_stringselect.json",
 	modelStateId: urlParams.get(QUERYPARAM_MODELSTATEID) ?? undefined,
+	slug: urlParams.get(QUERYPARAM_SLUG) ?? undefined,
 };
 
 (globalThis as {[key: string]: any}).developmentUrlBuilderOptions =
