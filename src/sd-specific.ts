@@ -316,16 +316,47 @@ class SpecificECommerceApiActions implements IECommerceApiActions {
 	}
 
 	addItemToCart(data: IAddItemToCartData): Promise<IAddItemToCartReply> {
-		if (this.defaultActions) return this.defaultActions.addItemToCart(data);
+		// here we skip the default action on purpose
+		//if (this.defaultActions) return this.defaultActions.addItemToCart(data);
+
+		const {description, modelStateId} = data;
+
+		// try to parse description as JSON
+		let pricingParameters: Record<string, any> = {};
+		if (description) {
+			try {
+				pricingParameters = JSON.parse(description);
+			} catch (e) {
+				console.warn(
+					`Failed to parse pricing parameters from description: ${description}`,
+					e,
+				);
+			}
+		}
+
+		// TODO Tara Blooms:
+		// Use pricing parameters to request price(s) from your backend,
+		// display user interface for confirming the addition to the cart,
+		// and finally return the cart item id.
+		// In case the user denies adding to the cart, return an empty cart item id.
+
+		console.log(
+			"Adding item to cart with modelStateId:",
+			modelStateId,
+			"and pricing parameters:",
+			pricingParameters,
+		);
 
 		const reply: IAddItemToCartReply = {
 			id: "DUMMY_ID",
 		};
 
-		return Promise.reject(reply);
+		return Promise.resolve(reply);
 	}
 
 	getUserProfile(): Promise<IGetUserProfileReply> {
+		// NOTE: This action is not used yet by App Builder, therefore no
+		// reason to implement it.
 		if (this.defaultActions) return this.defaultActions.getUserProfile();
 
 		const reply: IGetUserProfileReply = {
@@ -340,9 +371,13 @@ class SpecificECommerceApiActions implements IECommerceApiActions {
 	updateSharingLink(
 		data: IUpdateSharingLinkData,
 	): Promise<IUpdateSharingLinkReply> {
-		if (this.defaultActions)
-			return this.defaultActions.updateSharingLink(data);
+		// here we skip the default action on purpose
+		//if (this.defaultActions)
+		//	return this.defaultActions.updateSharingLink(data);
 
+		// TODO Tara Blooms: Here you could show a user interface for sharing the link
+		// via email, social media, etc.
+		// For now, we just update the URL in the browser.
 		const {modelStateId} = data;
 		const url = new URL(window.location.href);
 		url.searchParams.set(QUERYPARAM_MODELSTATEID, modelStateId);
@@ -354,18 +389,21 @@ class SpecificECommerceApiActions implements IECommerceApiActions {
 	async scrollingApiSetParameters(
 		data: IScrollingApiSetParametersData,
 	): Promise<IScrollingApiSetParametersReply<unknown>> {
+		// connection to the graphics API
 		return scrollingApiSetParameters(data);
 	}
 
 	async scrollingApiLoadMore(
 		data: IScrollingApiLoadMoreData,
 	): Promise<IScrollingApiLoadMoreReply<unknown>> {
+		// connection to the graphics API
 		return scrollingApiLoadMore(data);
 	}
 }
 
-(globalThis as {[key: string]: any}).specificECommerceApiActions =
-	new SpecificECommerceApiActions();
+(globalThis as {[key: string]: any}).specificECommerceApiActionsFactory = (
+	defaultActions: IECommerceApiActions,
+) => new SpecificECommerceApiActions(defaultActions);
 
 const urlParams = new URLSearchParams(window.location.search);
 
