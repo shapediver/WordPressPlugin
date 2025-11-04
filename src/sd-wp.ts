@@ -263,8 +263,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 					 * Optionally use a project-specific implementation of the API actions
 					 * instead of the default implementation.
 					 */
-					apiActions: (globalThis as {[key: string]: any})
-						.specificECommerceApiActions,
+					apiActionsFactory: (globalThis as {[key: string]: any})
+						.specificECommerceApiActionsFactory,
 					/**
 					 * Optionally use a project-specific implementation of the URL builder options
 					 * for local development.
@@ -351,8 +351,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 			 * Optionally use a project-specific implementation of the API actions
 			 * instead of the default implementation.
 			 */
-			apiActions: (globalThis as {[key: string]: any})
-				.specificECommerceApiActions,
+			apiActionsFactory: (globalThis as {[key: string]: any})
+				.specificECommerceApiActionsFactory,
 		});
 
 		return Promise.resolve(apiConnector);

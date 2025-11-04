@@ -41,9 +41,11 @@ export interface IConfiguratorLoaderOptions {
 	urlBuilderOptions?: IAppBuilderUrlBuilderData;
 
 	/**
-	 * Optional API actions to use instead of the default WordPressECommerceApiActions.
+	 * Optional factory for API actions to use instead of the default WordPressECommerceApiActions.
 	 */
-	apiActions?: IECommerceApiActions;
+	apiActionsFactory?: (
+		defaultActions: IECommerceApiActions,
+	) => IECommerceApiActions;
 }
 
 /**

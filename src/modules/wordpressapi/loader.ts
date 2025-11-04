@@ -38,7 +38,8 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 	): Promise<IECommerceApiConnector | undefined> {
 		this.log("🚀 Loading configurator", options);
 		// get product data, or use dummy data for local testing
-		const {productId, context, urlBuilderOptions, apiActions} = options;
+		const {productId, context, urlBuilderOptions, apiActionsFactory} =
+			options;
 		const productData = this.wordpressApi
 			? await this.wordpressApi.getProductData(parseInt(productId))
 			: // in local development mode, use dummy data
@@ -79,19 +80,20 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 			iframe.onload = async () => {
 				this.log("iframe loaded:", iframe);
 
-				// create ecommerce api actions
-				const actions =
-					apiActions ??
-					(this.wordpressApi
-						? new WordPressECommerceApiActions(this.wordpressApi, {
-								productId: parseInt(productId),
-								modelStateId,
-								debug: this.debug,
-								closeConfiguratorHandler:
-									this.options.closeConfiguratorHandler,
-							})
-						: new DummyECommerceApiActions());
-
+				// default ecommerce api actions
+				const defaultActions = this.wordpressApi
+					? new WordPressECommerceApiActions(this.wordpressApi, {
+							productId: parseInt(productId),
+							modelStateId,
+							debug: this.debug,
+							closeConfiguratorHandler:
+								this.options.closeConfiguratorHandler,
+						})
+					: new DummyECommerceApiActions();
+				// optionally override default ecommerce api actions
+				const actions = apiActionsFactory
+					? apiActionsFactory(defaultActions)
+					: defaultActions;
 				// create ecommerce api
 				const api = await ECommerceApiFactory.getConnectorApi(
 					iframe.contentWindow!,
