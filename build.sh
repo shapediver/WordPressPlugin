@@ -26,11 +26,23 @@ fi
 # Create zip archive
 print_colored $YELLOW "Creating zip archive..."
 cd $DIST_DIR
-if zip -r ../$FILE_NAME.zip .; then
-    print_colored $GREEN "Zip archive created successfully."
+if command -v zip &> /dev/null; then
+    # Use zip if available (Linux/macOS)
+    if zip -r ../$FILE_NAME.zip .; then
+        print_colored $GREEN "Zip archive created successfully."
+    else
+        print_colored $RED "Error creating zip archive. Exiting."
+        exit 1
+    fi
 else
-    print_colored $RED "Error creating zip archive. Exiting."
-    exit 1
+    # Fall back to PowerShell Compress-Archive on Windows
+    print_colored $YELLOW "zip command not found, using PowerShell Compress-Archive..."
+    if powershell.exe -Command "Compress-Archive -Path * -DestinationPath ../$FILE_NAME.zip"; then
+        print_colored $GREEN "Zip archive created successfully."
+    else
+        print_colored $RED "Error creating zip archive. Exiting."
+        exit 1
+    fi
 fi
 cd ..
 
