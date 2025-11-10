@@ -62,7 +62,7 @@ Example: `[sd_configurator_button label="My button text" class="myclass other-cl
 
 ### Getting Started
 
-1. Clone the repository
+1. Clone the repository and run `git submodule update --init`
 2. Install dependencies: `pnpm install`
 3. Build the plugin: `pnpm run build`
 4. Copy `docker-compose.template.yml` to `docker-compose.yml`
