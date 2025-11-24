@@ -120,7 +120,7 @@ async function fetchFromGraphicsApi(
 	}
 
 	const base =
-		"https://dev1.tarablooms.in/wp-json/custom/v1/graphic-components";
+		"https://test1.tarablooms.in/wp-json/custom/v1/graphic-components";
 
 	const url = `${base}?${queryString}`;
 
