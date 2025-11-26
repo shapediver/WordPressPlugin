@@ -68,6 +68,7 @@ function getGraphicsApiQueryString(
 	categories?: string[] | string,
 	tags?: string,
 	search?: string,
+	categoryIds?: number[],
 ): string {
 	const params = new URLSearchParams();
 	if (Array.isArray(categories) && categories.length === 0)
@@ -75,10 +76,25 @@ function getGraphicsApiQueryString(
 
 	if (!categories && !tags && !search) categories = "all";
 
-	if (categories) {
+	if (categoryIds && categoryIds.length > 0) {
+		params.set(
+			"category_id",
+			categoryIds[categoryIds.length - 1].toString(),
+		);
+		if (!tags && !search) {
+			// if a product category has been chosen, but no search term
+			// is present, get all products in that category
+			params.set("tags", "all");
+		}
+	} else if (categories) {
 		if (Array.isArray(categories))
 			params.set("categories", categories.join(","));
 		else params.set("categories", categories);
+		if (categories !== "all" && !tags && !search) {
+			// if a product category has been chosen, but no search term
+			// is present, get all products in that category
+			params.set("tags", "all");
+		}
 	}
 	if (tags) params.set("tags", tags);
 	if (search) params.set("search", search);
@@ -88,8 +104,10 @@ function getGraphicsApiQueryString(
 
 /** Query string used for the latest API call. */
 let latestQuery: string = getGraphicsApiQueryString("");
+/** Query string for fetching all categories. */
+const allCategoriesQuery: string = getGraphicsApiQueryString();
 /** Depth of categories for the latest API call. */
-let latestCategoryDepth: number = 0;
+let latestCategorySlugs: Array<string> = [];
 /** Page size to be used for data returned to the App Builder iframe. */
 let pageSize: number = 10;
 /** Current index. */
@@ -102,7 +120,7 @@ const cachedResults: Record<string, IGraphicsApiResponse> = {};
  */
 function clearCache() {
 	latestQuery = getGraphicsApiQueryString();
-	latestCategoryDepth = 0;
+	latestCategorySlugs = [];
 	pageSize = 10;
 	currentIndex = 0;
 	for (const key in cachedResults) delete cachedResults[key];
@@ -157,14 +175,45 @@ async function fetchFromGraphicsApi(
  * Return and map cached results.
  * @returns
  */
-function returnAndMapCachedResults(): IScrollingApiLoadMoreReply<unknown> {
-	// if there are products, return them
-	const products = cachedResults[latestQuery].products;
-	if (products) {
-		if (currentIndex >= products.length) {
-			return {hasNextPage: false, items: []};
+async function returnAndMapCachedResults(): Promise<
+	IScrollingApiLoadMoreReply<unknown>
+> {
+	const result: IScrollingApiLoadMoreReply<unknown> = {
+		hasNextPage: false,
+		items: [],
+	};
+
+	// map categories
+	const categoryData = await fetchFromGraphicsApi(allCategoriesQuery, false);
+	let categories = categoryData.categories;
+	if (categories) {
+		for (let i = 0; i < latestCategorySlugs.length; i++) {
+			const categorySlug = latestCategorySlugs[i];
+			const matchedCategory: ICategory | undefined = categories.find(
+				(cat) => cat.slug === categorySlug,
+			);
+			if (!matchedCategory)
+				throw new Error(
+					`Category with slug "${categorySlug}" not found`,
+				);
+			categories = matchedCategory.children;
 		}
 
+		// map categories to items
+		const items: IScrollingApiItemTypeSelect[] = categories.map((p) => ({
+			item: "search:category:" + p.name,
+			data: {
+				displayname: p.name,
+				imageUrl: p.thumbnail_url,
+				data: p,
+			},
+		}));
+		result.items = items;
+	}
+
+	// map products
+	const products = cachedResults[latestQuery].products;
+	if (products) {
 		// map products to items
 		const items: IScrollingApiItemTypeSelect[] = products
 			.slice(currentIndex, currentIndex + pageSize)
@@ -181,48 +230,13 @@ function returnAndMapCachedResults(): IScrollingApiLoadMoreReply<unknown> {
 			}));
 		currentIndex += pageSize;
 
-		const result = {
-			hasNextPage: currentIndex < products.length,
-			items: items,
-		};
-		//console.debug("products", result);
-		return result;
+		result.hasNextPage = currentIndex < products.length;
+		result.items = result.items.concat(items);
 	}
 
-	// if there are no products, map categories and return them
-	let categories = cachedResults[latestQuery].categories;
-	if (categories) {
-		if (currentIndex >= categories.length) {
-			return {hasNextPage: false, items: []};
-		}
+	console.log(result);
 
-		for (let i = 0; i < latestCategoryDepth; i++) {
-			if (categories.length > 0) categories = categories[0].children;
-			else break;
-		}
-
-		// map categories to items
-		const items: IScrollingApiItemTypeSelect[] = categories
-			.slice(currentIndex, currentIndex + pageSize)
-			.map((p) => ({
-				item: "search:category:" + p.name,
-				data: {
-					displayname: p.name,
-					imageUrl: p.thumbnail_url,
-					data: p,
-				},
-			}));
-		currentIndex += pageSize;
-
-		const result = {
-			hasNextPage: currentIndex < categories.length,
-			items: items,
-		};
-		//console.debug("categories", result);
-		return result;
-	}
-
-	return {hasNextPage: false, items: []};
+	return result;
 }
 
 /**
@@ -240,10 +254,15 @@ async function scrollingApiSetParameters(
 	}
 
 	if (data.terms) {
-		let categories: string[] = [];
+		const categories: string[] = [];
+		const categoryIds: number[] = [];
 		let tags: string = "";
 		let search: string = "";
-		let cachedCategories = cachedResults[latestQuery].categories;
+		const categoryData = await fetchFromGraphicsApi(
+			allCategoriesQuery,
+			false,
+		);
+		let cachedCategories = categoryData.categories;
 		data.terms?.forEach((v) => {
 			if (v.startsWith("category:")) {
 				if (cachedCategories) {
@@ -253,18 +272,23 @@ async function scrollingApiSetParameters(
 						(cat) => cat.name === categoryName,
 					);
 					if (matchedCategory) {
-						if (!categories) categories = [];
 						categories.push(matchedCategory.slug);
+						categoryIds.push(matchedCategory.id);
 						cachedCategories = matchedCategory.children;
 					}
 				}
 			} else if (v.startsWith("tag:")) tags = v.substring("tag:".length);
 			else search = v;
 		});
-		const queryString = getGraphicsApiQueryString(categories, tags, search);
+		const queryString = getGraphicsApiQueryString(
+			categories,
+			tags,
+			search,
+			categoryIds,
+		);
 		if (queryString !== latestQuery) {
 			latestQuery = queryString;
-			latestCategoryDepth = categories.length;
+			latestCategorySlugs = categories;
 			currentIndex = 0;
 		}
 	}
