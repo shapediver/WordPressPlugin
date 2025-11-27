@@ -108,7 +108,7 @@ class ShapeDiverConfiguratorPlugin {
                         </td>
                     </tr>
                     <tr valign="top">
-                        <th scope="row">Default URL of the JSON file defining the App Builder settings of the configurator. This can be a relative or absolute URL, and can be overridden for each product. Leave this empty to not apply a specific theme.</th>
+                        <th scope="row">Default URL of the JSON file defining the App Builder theme of the configurator. This can be a relative or absolute URL, and can be overridden for each product. Leave this empty to not apply a specific theme.</th>
                         <td>
                             <input type="text" name="default_settings_url" value="<?php echo esc_attr(get_option('default_settings_url')); ?>" />
                         </td>
@@ -493,9 +493,9 @@ class ShapeDiverConfiguratorPlugin {
         ));
         woocommerce_wp_text_input(array(
             'id' => '_settings_url',
-            'label' => __('Settings JSON URL', 'woocommerce'),
+            'label' => __('Theme JSON URL', 'woocommerce'),
             'desc_tip' => 'true',
-            'description' => __('Optional. Enter a URL of the JSON file defining the App Builder settings of the configurator. This can be a relative or absolute URL.', 'woocommerce')
+            'description' => __('Optional. Enter a URL of the JSON file defining the App Builder theme of the configurator. If left empty, the default theme configured in the ShapeDiver plugin settings will be used. This can be a relative or absolute URL.', 'woocommerce')
         ));
         
         echo '</div>';
