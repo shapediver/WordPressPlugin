@@ -114,6 +114,8 @@ let pageSize: number = 10;
 let currentIndex: number = 0;
 /** Cached responses of previous API calls. */
 const cachedResults: Record<string, IGraphicsApiResponse> = {};
+/** Identifier for category items. */
+const categoryIdentifier = "\u200B\u2063";
 
 /**
  * Clear the cache of previous API calls.
@@ -201,7 +203,7 @@ async function returnAndMapCachedResults(): Promise<
 
 		// map categories to items
 		const items: IScrollingApiItemTypeSelect[] = categories.map((p) => ({
-			item: "search:category:" + p.name,
+			item: `search:${categoryIdentifier}` + p.name,
 			data: {
 				displayname: p.name,
 				imageUrl: p.thumbnail_url,
@@ -264,9 +266,9 @@ async function scrollingApiSetParameters(
 		);
 		let cachedCategories = categoryData.categories;
 		data.terms?.forEach((v) => {
-			if (v.startsWith("category:")) {
+			if (v.startsWith(categoryIdentifier)) {
 				if (cachedCategories) {
-					const categoryName = v.substring("category:".length);
+					const categoryName = v.substring(categoryIdentifier.length);
 					// Check if the category exists in the fetched categories
 					const matchedCategory = cachedCategories.find(
 						(cat) => cat.name === categoryName,
