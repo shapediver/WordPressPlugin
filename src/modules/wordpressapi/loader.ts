@@ -50,6 +50,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 					model_view_url: undefined,
 					slug: undefined,
 					settings_url: "example-ecommerce.json",
+					query_params: undefined,
 				};
 
 		// build configurator url
@@ -70,6 +71,7 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 					? productData.settings_url
 					: this.options.defaultSettingsUrl,
 				context,
+				queryParams: productData.query_params,
 			},
 		);
 
