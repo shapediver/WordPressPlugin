@@ -18,6 +18,7 @@ export const IWordpressGetProductDataResponseSchema = z.object({
 	model_state_id: z.string().optional(),
 	configurator_url: z.string().optional(),
 	settings_url: z.string().optional(),
+	query_params: z.record(z.string()).optional(),
 });
 
 // Zod type definition for IWordpressCartItem

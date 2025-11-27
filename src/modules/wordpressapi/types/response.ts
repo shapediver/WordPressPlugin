@@ -42,6 +42,8 @@ export interface IWordpressGetProductDataResponse {
 	 * Optional URL (relative or absolute) to a settings JSON file.
 	 */
 	settings_url?: string;
+	/** Optional further query parameters to be appended. */
+	query_params?: Record<string, string>;
 }
 
 /**

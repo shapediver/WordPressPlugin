@@ -528,6 +528,7 @@ class ShapeDiverConfiguratorPlugin {
             'model_state_id' => sanitize_text_field(get_post_meta($product_id, '_model_state_id', true)),
             'slug' => sanitize_text_field(get_post_meta($product_id, '_slug', true)),
             'settings_url' => sanitize_text_field(get_post_meta($product_id, '_settings_url', true)),
+            //'query_params' => array(), // placeholder for returning custom query parameters
         );
         wp_send_json_success($data);
     }
