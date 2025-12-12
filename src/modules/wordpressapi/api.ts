@@ -156,9 +156,15 @@ export class WordpressApi implements IWordpressApi {
 		// Trigger WooCommerce cart refresh
 		// see https://developer.woocommerce.com/docs/block-development/getting-started/faq/#how-to-force-refresh-the-cart-from-the-server
 		try {
-			(globalThis as any).wp.data
-				.dispatch("wc/store/cart")
-				.invalidateResolutionForStore("cart");
+			if ((globalThis as any).wp?.data?.dispatch) {
+				(globalThis as any).wp.data
+					.dispatch("wc/store/cart")
+					.invalidateResolutionForStore("cart");
+			} else {
+				(globalThis as any)
+					.jQuery(document.body)
+					.trigger("wc_fragment_refresh");
+			}
 		} catch (e) {
 			console.log("Could not trigger WooCommerce cart refresh", e);
 		}
