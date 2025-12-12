@@ -404,7 +404,12 @@ class SpecificECommerceApiActions implements IECommerceApiActions {
 		// TODO Tara Blooms: Here you could show a user interface for sharing the link
 		// via email, social media, etc.
 		// For now, we just update the URL in the browser.
-		const {modelStateId} = data;
+		const {modelStateId, imageUrl} = data;
+		console.log(
+			imageUrl
+				? `Model state with image data URL: ${imageUrl.substring(0, 10)}`
+				: "Model state without image",
+		);
 		const url = new URL(window.location.href);
 		url.searchParams.set(QUERYPARAM_MODELSTATEID, modelStateId);
 		const href = url.toString();
