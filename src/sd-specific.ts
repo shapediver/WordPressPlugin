@@ -23,30 +23,36 @@ import {IScrollingApiItemTypeSelect} from "./shared/modules/ecommerce/types/scro
  * Type definition for product categories.
  */
 interface ICategory {
+	children: ICategory[];
 	id: number;
 	name: string;
-	slug: string;
 	path: string;
+	slug: string;
 	thumbnail_url: string;
-	children: ICategory[];
 }
 
 /**
  * Type definition for product graphics.
  */
 interface IProduct {
-	graphic_id: number;
-	graphic_name: string;
-	description: string;
 	category_id: number;
 	category_name: string;
-	tags: string[];
+	category_structure: Array<string>;
+	description: string;
 	downloadable_files: {
-		name: string;
-		image_type: "thumbnail" | string;
-		image_png_url?: string;
-		image_jpg_url?: string;
+		height: number;
+		image_size: string;
+		keep_horizontal_orientation: boolean;
+		keep_vertical_orientation: boolean;
+		parameterValues: {
+			file_url: string;
+		};
+		sessionId: Array<string>;
+		width: number;
 	}[];
+	graphic_id: number;
+	graphic_name: string;
+	tags: string[];
 }
 
 /**
@@ -224,9 +230,9 @@ async function returnAndMapCachedResults(): Promise<
 				data: {
 					displayname: p.graphic_name,
 					tooltip: p.description,
-					imageUrl: p.downloadable_files.find(
-						(f) => f.image_type === "thumbnail",
-					)?.image_png_url,
+					imageUrl: p.downloadable_files.find((f) =>
+						f.sessionId.includes("thumbnail"),
+					)?.parameterValues.file_url,
 					data: p,
 				},
 			}));
