@@ -129,7 +129,7 @@ function clearCache() {
 }
 
 /**
- * Fetch from https://tarablooms.in/wp-json/custom/v1/graphic-components
+ * Fetch from Graphics API.
  */
 async function fetchFromGraphicsApi(
 	queryString: string,
@@ -140,7 +140,7 @@ async function fetchFromGraphicsApi(
 	}
 
 	const base =
-		"https://test1.tarablooms.in/wp-json/custom/v1/graphic-components";
+		"https://test1.tarablooms.in/wp-json/shapediver/v1/graphic-components";
 
 	const url = `${base}?${queryString}`;
 
