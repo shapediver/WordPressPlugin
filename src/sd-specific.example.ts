@@ -9,6 +9,8 @@ import {
 	IECommerceApiActions,
 	IGetParentPageInfoReply,
 	IGetUserProfileReply,
+	IMessageToParentData,
+	IMessageToParentReply,
 	IScrollingApiLoadMoreData,
 	IScrollingApiLoadMoreReply,
 	IScrollingApiSetParametersData,
@@ -85,6 +87,15 @@ class SpecificECommerceApiActions implements IECommerceApiActions {
 		// remove the following line if you want to implement a custom action
 		if (this.defaultActions)
 			return this.defaultActions.scrollingApiLoadMore(data);
+
+		return Promise.reject("Not implemented");
+	}
+
+	messageToParent(
+		data: IMessageToParentData,
+	): Promise<IMessageToParentReply> {
+		if (this.defaultActions)
+			return this.defaultActions.messageToParent(data);
 
 		return Promise.reject("Not implemented");
 	}
