@@ -4,6 +4,7 @@ import {
 	IECommerceApiActions,
 	IGetParentPageInfoReply,
 	IGetUserProfileReply,
+	IMessageToParentReply,
 	IScrollingApiLoadMoreReply,
 	IScrollingApiSetParametersReply,
 	IUpdateSharingLinkData,
@@ -283,5 +284,10 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 
 	async getParentPageInfo(): Promise<IGetParentPageInfoReply> {
 		return Promise.resolve({href: window.location.href});
+	}
+
+	messageToParent() /*data: IMessageToParentData,*/
+	: Promise<IMessageToParentReply> {
+		return Promise.resolve({});
 	}
 }
