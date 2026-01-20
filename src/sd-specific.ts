@@ -10,6 +10,8 @@ import {
 	IECommerceApiActions,
 	IGetParentPageInfoReply,
 	IGetUserProfileReply,
+	IMessageToParentData,
+	IMessageToParentReply,
 	IScrollingApiLoadMoreData,
 	IScrollingApiLoadMoreReply,
 	IScrollingApiSetParametersData,
@@ -122,6 +124,8 @@ let currentIndex: number = 0;
 const cachedResults: Record<string, IGraphicsApiResponse> = {};
 /** Identifier for category items. */
 const categoryIdentifier = "\u200B\u2063";
+/** Callback for resetting cache in App Builder app. */
+let resetCacheCallback: (() => void) | null = null;
 
 /**
  * Clear the cache of previous API calls.
@@ -132,6 +136,7 @@ function clearCache() {
 	pageSize = 10;
 	currentIndex = 0;
 	for (const key in cachedResults) delete cachedResults[key];
+	if (resetCacheCallback) resetCacheCallback();
 }
 
 /**
@@ -242,7 +247,7 @@ async function returnAndMapCachedResults(): Promise<
 		result.items = result.items.concat(items);
 	}
 
-	console.log(result);
+	// console.log(result);
 
 	return result;
 }
@@ -259,6 +264,10 @@ async function scrollingApiSetParameters(
 		console.debug(`Unsupported data source name: ${data.source}`);
 		clearCache();
 		return {hasNextPage: false, items: []};
+	}
+
+	if (data.reset) {
+		resetCacheCallback = data.reset;
 	}
 
 	if (data.terms) {
@@ -326,6 +335,24 @@ async function scrollingApiLoadMore(
 
 	await fetchFromGraphicsApi(latestQuery, false);
 	return returnAndMapCachedResults();
+}
+
+/**
+ * This function is a placeholder for image upload implementation.
+ *
+ * What this function is expected to do:
+ *
+ *   * Present a UI to the user to select one or several images to upload.
+ *   * Upload the images.
+ *   * Return true if the upload was successful and the graphics selection UI should be refreshed.
+ *   * Return false if the upload failed or was cancelled by the user.
+ *
+ * @returns
+ */
+async function imageUpload(): Promise<boolean> {
+	// TODO Tara Blooms: Implement image upload to your backend here.
+	console.log("Uploading image...");
+	return Promise.resolve(true);
 }
 
 /**
@@ -435,6 +462,25 @@ class SpecificECommerceApiActions implements IECommerceApiActions {
 	): Promise<IScrollingApiLoadMoreReply<unknown>> {
 		// connection to the graphics API
 		return scrollingApiLoadMore(data);
+	}
+
+	async messageToParent(
+		data: IMessageToParentData,
+	): Promise<IMessageToParentReply> {
+		if (data.type === "uploadImages") {
+			const success = await imageUpload();
+			if (success) clearCache();
+			return Promise.resolve({
+				notification: {
+					data: {
+						message: success
+							? "Image uploaded successfully."
+							: "Image upload cancelled or failed.",
+					},
+				},
+			});
+		}
+		return Promise.resolve({});
 	}
 }
 
