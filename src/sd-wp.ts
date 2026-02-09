@@ -255,23 +255,28 @@ class ConfiguratorManager implements IConfiguratorManager {
 		// in local development mode, load a dummy configurator right away
 		if (!this.runsInsideECommerceSystem) {
 			setTimeout(async () => {
-				await this.configuratorLoader.load(this.iframe, {
-					productId: "",
-					modelStateId: this.modelStateIdFromUrl ?? undefined,
-					baseUrl: this.baseUrl,
-					/**
-					 * Optionally use a project-specific implementation of the API actions
-					 * instead of the default implementation.
-					 */
-					apiActionsFactory: (globalThis as {[key: string]: any})
-						.specificECommerceApiActionsFactory,
-					/**
-					 * Optionally use a project-specific implementation of the URL builder options
-					 * for local development.
-					 */
-					urlBuilderOptions: (globalThis as {[key: string]: any})
-						.developmentUrlBuilderOptions,
-				});
+				const apiConnector = await this.configuratorLoader.load(
+					this.iframe,
+					{
+						productId: "",
+						modelStateId: this.modelStateIdFromUrl ?? undefined,
+						baseUrl: this.baseUrl,
+						/**
+						 * Optionally use a project-specific implementation of the API actions
+						 * instead of the default implementation.
+						 */
+						apiActionsFactory: (globalThis as {[key: string]: any})
+							.specificECommerceApiActionsFactory,
+						/**
+						 * Optionally use a project-specific implementation of the URL builder options
+						 * for local development.
+						 */
+						urlBuilderOptions: (globalThis as {[key: string]: any})
+							.developmentUrlBuilderOptions,
+					},
+				);
+				(globalThis as {[key: string]: any}).ecommerceApi =
+					apiConnector;
 				this.setConfiguratorVisibility(true);
 			}, 1000);
 		}
