@@ -118,7 +118,29 @@ The resulting zip file can be found in the project root directory.
 
 In case you need to implement custom handlers for the actions that the app running inside 
 the iframe may call, check out [src/sd-specific.example.ts](src/sd-specific.example.ts) on
-how to implement your custom handlers.
+how to implement your custom handlers. You can find the implementation of the default 
+handlers [here](src/modules/wordpressapi/api.ts#L180). 
+
+## Updating parameter values 
+It is possible to update parameter values of the App Builder app running inside the iframe. 
+As an example, this can be used to implement custom UI elements in the product page, which allow to switch between preset configurations. The following code example shows how to initiate the update of parameter values: 
+
+```
+globalThis.ecommerceApi.updateParameterValues({
+  state: {
+    ["default"]: {
+      "Position": "5,2,5"
+    }
+  }
+});
+```
+
+This updates the value of the parameter called `Position` for the session whose id is `default`
+to `5,2,5` and returns a promise which resolves once the parameter update has been completed. Await this promise to check for successful execution and catch potential errors. 
+
+Multiple parameter values for multiple sessions can be updated at the same time. 
+
+The type definition of the arguments of `updateParameterValues` can be found [here](https://github.com/shapediver/AppBuilderShared/blob/95ef6c23c6bf19836387a54e9c63312fef7cce7d/modules/ecommerce/types/ecommerceapi.ts#L262).  
 
 ## License
 
