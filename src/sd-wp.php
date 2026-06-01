@@ -497,13 +497,19 @@ class ShapeDiverConfiguratorPlugin {
             'desc_tip' => 'true',
             'description' => __('Optional. Enter a URL of the JSON file defining the App Builder theme of the configurator. If left empty, the default theme configured in the ShapeDiver plugin settings will be used. This can be a relative or absolute URL.', 'woocommerce')
         ));
+        woocommerce_wp_text_input(array(
+            'id' => '_parameters_settings_url',
+            'label' => __('Parameters Settings URL', 'woocommerce'),
+            'desc_tip' => 'true',
+            'description' => __('Optional. Value to use for the "parameters_settings_url" input of the configurator.', 'woocommerce')
+        ));
         
         echo '</div>';
     }
 
     // Save custom product fields
     public function save_custom_product_fields($post_id) {
-        $fields = array('_slug', '_embedding_ticket', '_model_view_url', '_model_state_id', '_configurator_url', '_settings_url');
+        $fields = array('_slug', '_embedding_ticket', '_model_view_url', '_model_state_id', '_configurator_url', '_settings_url', '_parameters_settings_url');
         foreach ($fields as $field) {
             if (isset($_POST[$field])) {
                 update_post_meta($post_id, $field, sanitize_text_field(wp_unslash($_POST[$field])));
@@ -518,6 +524,7 @@ class ShapeDiverConfiguratorPlugin {
         if (!$product) {
             wp_send_json_error('Invalid product');
         }
+
         $data = array(
             'id' => $product->get_id(),
             'name' => esc_html($product->get_name()),
@@ -528,8 +535,19 @@ class ShapeDiverConfiguratorPlugin {
             'model_state_id' => sanitize_text_field(get_post_meta($product_id, '_model_state_id', true)),
             'slug' => sanitize_text_field(get_post_meta($product_id, '_slug', true)),
             'settings_url' => sanitize_text_field(get_post_meta($product_id, '_settings_url', true)),
-            //'query_params' => array(), // placeholder for returning custom query parameters
         );
+
+        // Prepare further query parameters to be appended to the configurator URL.
+        // This can be used to pass initial parameter values to the configurator.
+        // Related documentation: 
+        // https://help.shapediver.com/doc/embed-apps-in-external-websites#EmbedAppsinexternalwebsites-URLparameters
+        $parameter_settings_url = sanitize_text_field(get_post_meta($product_id, '_parameters_settings_url', true));
+        if (!empty($parameter_settings_url)) {
+            $query_params = array();
+            $query_params['_parameters_settings_url'] = $parameter_settings_url;
+            $data['query_params'] = $query_params;
+        }
+
         wp_send_json_success($data);
     }
 
