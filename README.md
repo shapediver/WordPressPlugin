@@ -142,6 +142,34 @@ Multiple parameter values for multiple sessions can be updated at the same time.
 
 The type definition of the arguments of `updateParameterValues` can be found [here](https://github.com/shapediver/AppBuilderShared/blob/95ef6c23c6bf19836387a54e9c63312fef7cce7d/modules/ecommerce/types/ecommerceapi.ts#L262).  
 
+## Creating and importing model states
+
+Model states can be created and imported as shown in the following example. 
+
+```
+globalThis.ecommerceApi.createModelState();
+```
+
+`createModelState` returns a promise that resolves to the following shape: 
+
+```JSON
+{
+  modelStateId: 'mVdTbVUO9rBRLWRh', 
+  modelViewUrl: 'https://sdr7euc1.eu-central-1.shapediver.com'
+}
+```
+
+Importing a model state works like this: 
+
+```
+globalThis.ecommerceApi.importModelState({modelStateId: "MODEL_STATE_ID"})
+```
+
+The type definitions of the arguments of `createModelState` and `importModelState` can be found here: 
+
+  * [`createModelState`](https://github.com/shapediver/AppBuilderShared/blob/b9aecd70d300e3ff3b193fdb2f0e847c1ab9b176/features/model-state/config/createModelState.ts#L33)
+  * [`importModelState`](https://github.com/shapediver/AppBuilderShared/blob/b9aecd70d300e3ff3b193fdb2f0e847c1ab9b176/features/model-state/config/importModelState.ts#L14)
+
 ## License
 
 This project is licensed under the GPL v2 license.
