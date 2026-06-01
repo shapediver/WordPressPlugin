@@ -41,6 +41,7 @@
   },
   "include": [
     "src/sd-specific.example.ts",
+    "src/sd-specific.ts",
     "src/sd-wp.ts"
   ]
 }
