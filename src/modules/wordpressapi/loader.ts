@@ -1,9 +1,9 @@
 import {
 	DummyECommerceApiActions,
 	ECommerceApiFactory,
-} from "../../shared/modules/ecommerce/ecommerceapi";
-import {IECommerceApiConnector} from "../../shared/modules/ecommerce/types/ecommerceapi";
-import {buildAppBuilderUrl} from "../../shared/utils/urlbuilder";
+} from "@AppBuilderShared/features/ecommerce/api/ecommerceapi";
+import {IECommerceApiConnector} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
+import {buildAppBuilderUrl} from "@AppBuilderShared/shared/lib/urlbuilder";
 import {
 	IConfiguratorLoader,
 	IConfiguratorLoaderOptions,

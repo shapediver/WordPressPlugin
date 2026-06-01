@@ -1,9 +1,9 @@
 import {
 	QUERYPARAM_MODELSTATEID,
 	QUERYPARAM_SETTINGSURL,
-} from "@AppBuilderShared/types/shapediver/queryparams";
-import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/utils/urlbuilder";
-import {
+} from "@AppBuilderShared/shared/config/queryparams";
+import type {IAppBuilderUrlBuilderData} from "@AppBuilderShared/shared/lib/urlbuilder";
+import type {
 	IAddItemToCartData,
 	IAddItemToCartReply,
 	IECommerceApiActions,
@@ -17,7 +17,7 @@ import {
 	IScrollingApiSetParametersReply,
 	IUpdateSharingLinkData,
 	IUpdateSharingLinkReply,
-} from "./shared/modules/ecommerce/types/ecommerceapi";
+} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
 
 /**
  * This file contains an example override implementation of IECommerceApiAction

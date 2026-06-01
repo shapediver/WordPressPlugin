@@ -17,8 +17,8 @@ along with this program; if not, see <https://www.gnu.org/licenses/>.
 
  */
 
-import {IECommerceApiConnector} from "@AppBuilderShared/modules/ecommerce/types/ecommerceapi";
-import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/types/shapediver/queryparams";
+import {IECommerceApiConnector} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
+import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/shared/config/queryparams";
 import packagejson from "../package.json";
 import {IConfiguratorLoader} from "./modules/configuratormanager/types/loader";
 import {WordPressConfiguratorLoader} from "./modules/wordpressapi/loader";

@@ -39,6 +39,7 @@
     "vite-tsconfig-paths": "^5.1.4"
   },
   "dependencies": {
+    "@shapediver/sdk.geometry-api-sdk-v2": "^3.4.2",
     "post-robot": "^8.0.32",
     "zod": "^3.23.8"
   }
