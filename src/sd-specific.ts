@@ -2,9 +2,9 @@ import {
 	QUERYPARAM_MODELSTATEID,
 	QUERYPARAM_SETTINGSURL,
 	QUERYPARAM_SLUG,
-} from "@AppBuilderShared/types/shapediver/queryparams";
-import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/utils/urlbuilder";
-import {
+} from "@AppBuilderShared/shared/config/queryparams";
+import type {IAppBuilderUrlBuilderData} from "@AppBuilderShared/shared/lib/urlbuilder";
+import type {
 	IAddItemToCartData,
 	IAddItemToCartReply,
 	IECommerceApiActions,
@@ -18,8 +18,8 @@ import {
 	IScrollingApiSetParametersReply,
 	IUpdateSharingLinkData,
 	IUpdateSharingLinkReply,
-} from "./shared/modules/ecommerce/types/ecommerceapi";
-import {IScrollingApiItemTypeSelect} from "./shared/modules/ecommerce/types/scrollingapi";
+} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
+import {IScrollingApiItemTypeSelect} from "./shared/features/ecommerce/config/scrollingapi";
 
 /**
  * Type definition for product categories.
