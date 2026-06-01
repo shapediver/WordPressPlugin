@@ -10,6 +10,9 @@
       "@AppBuilderShared/*": [
         "./shared/*"
       ],
+      "@AppBuilderLib/*": [
+        "./shared/*"
+      ],
       "~/*": [
         "./*"
       ]
@@ -37,6 +40,7 @@
     "sourceMap": true
   },
   "include": [
+    "src/sd-specific.example.ts",
     "src/sd-wp.ts"
   ]
 }

@@ -9,8 +9,8 @@ import {
 	IScrollingApiSetParametersReply,
 	IUpdateSharingLinkData,
 	IUpdateSharingLinkReply,
-} from "@AppBuilderShared/modules/ecommerce/types/ecommerceapi";
-import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/types/shapediver/queryparams";
+} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
+import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/shared/config/queryparams";
 import {
 	IWordpressApi,
 	IWordpressApiOptions,

@@ -1,8 +1,8 @@
-import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/utils/urlbuilder";
+import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/shared/lib/urlbuilder";
 import {
 	IECommerceApiActions,
 	IECommerceApiConnector,
-} from "shared/modules/ecommerce/types/ecommerceapi";
+} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
 
 /**
  * Options for loading a configurator.
