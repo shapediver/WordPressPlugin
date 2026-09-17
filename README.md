@@ -65,40 +65,35 @@ Example: `[sd_configurator_button label="My button text" class="myclass other-cl
 1. Clone the repository and run `git submodule update --init`
 2. Install dependencies: `pnpm install`
 3. Build the plugin: `pnpm run build`
-4. Copy `docker-compose.template.yml` to `docker-compose.yml`
-5. Create and start the container: `pnpm run wp:start`
-6. Navigate to `http://localhost:8080` and wait until WordPress is running
-7. Uncomment the line that mounts the plugin in `docker-compose.yml`
-8. Restart the container: `pnpm run wp:restart`
+4. Start WordPress: `pnpm run wp:start`
+5. Open `http://localhost:8080/wp-admin` (user `admin`, password `admin`)
 
-In general, whenever you want to refresh the container using local code changes, 
-carry out the following steps: 
+`wp:start` creates the WordPress and MariaDB containers, installs WordPress and WooCommerce, and activates this plugin from `./dist`.
 
-1. Build the plugin: `pnpm run build`
-2. Restart the container: `pnpm run wp:restart`
+If you previously used the Bitnami-based stack, run `pnpm run wp:reset` once. The old volumes are incompatible.
 
-Hint: The default WordPress user name is `user`, the default password is `bitnami`. 
+After code changes, rebuild the plugin (`pnpm run build`) and refresh the browser. A container restart is optional.
 
 ### Development Commands
 
 The following scripts are available for development:
 
-- `pnpm run wp:start`: Create the container if it hasn't been created before
-- `pnpm run wp:stop`: Stop the container
-- `pnpm run wp:restart`: Same as `wp:stop` followed by `wp:start`
-- `pnpm run wp:reset`: CAUTION! Recreates the containers, your data stored in WordPress will be lost!
+- `pnpm run wp:start`: Start WordPress and run first-time setup if needed
+- `pnpm run wp:stop`: Stop the containers
+- `pnpm run wp:restart`: Recreate the WordPress and database containers (keeps volumes)
+- `pnpm run wp:reset`: CAUTION! Deletes WordPress data volumes and reinstalls from scratch
 - `pnpm run wp:status`: Show docker status
-- `pnpm run dev:status`: Check the status of the development environment
 - `pnpm run build`: Build and bundle the plugin for production
 - `pnpm run start`: Standalone development mode of the plugin (without WordPress)
 - `pnpm run optimize`: Optimized build for production
 
 ### Docker Environment
 
-The project uses Docker for local development. The `docker-compose.yml` file sets up:
+The project uses Docker for local development. `docker-compose.yml` sets up:
 
-- A MariaDB database
-- A WordPress instance with the plugin directory mounted
+- Official MariaDB (`mariadb:lts`)
+- Official WordPress (`wordpress:php8.3-apache`) with `./dist` mounted as the plugin
+- A one-shot WP-CLI setup service that installs WooCommerce and activates the plugin
 
 To access the WordPress site, visit `http://localhost:8080` after starting the development environment.
 
