@@ -39,7 +39,7 @@ class ShapeDiverConfiguratorPlugin {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // WooCommerce product page modifications
-        add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
+        add_action('woocommerce_after_add_to_cart_form', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
         add_action('woocommerce_process_product_meta', array($this, 'save_custom_product_fields'));
@@ -172,7 +172,7 @@ class ShapeDiverConfiguratorPlugin {
         if ($product) {
             $product_id = $product->get_id();
             if ($this->is_product_configurable($product_id)) {
-                echo '<button class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
+                echo '<button type="button" class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
             }
         }
     }
