@@ -29,8 +29,8 @@ console.log(`ShapeDiver WordPress Plugin v${packagejson.version}`);
 const MODAL_ELEMENT_ID = "app-builder-modal-wrapper";
 /** Id of the iframe hosting the configurator. */
 const IFRAME_ELEMENT_ID = "app-builder-iframe";
-/** Id of the button used to open the configurator (display the modal). */
-const OPEN_CONFIGURATOR_BUTTON_ID = "app-builder-open-configurator";
+/** Class of the button used to open the configurator (display the modal). */
+const OPEN_CONFIGURATOR_BUTTON_CLASS = "app-builder-open-configurator";
 /** Id of the button used for closing the configurator modal. */
 const CLOSE_CONFIGURATOR_BUTTON_SELECTOR = "#app-builder-modal-close-button";
 /** Selector for testing whether we are running inside the e-commerce system. */
@@ -191,7 +191,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		this.bindEvents();
 
 		// load and enable the configurator on product pages
-		if (document.getElementById(OPEN_CONFIGURATOR_BUTTON_ID)) {
+		if (document.querySelector(`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`)) {
 			this.loadConfigurator().then((apiConnector) => {
 				(globalThis as {[key: string]: any}).ecommerceApi =
 					apiConnector;
@@ -236,9 +236,10 @@ class ConfiguratorManager implements IConfiguratorManager {
 	): Promise<boolean | undefined> {
 		if (!event.target) return;
 		const target = event.target as HTMLElement;
-		if (target.matches(`#${OPEN_CONFIGURATOR_BUTTON_ID}`)) {
+		const button = target.closest(`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`);
+		if (button instanceof HTMLElement) {
 			event.preventDefault();
-			const apiConnector = await this.loadConfigurator(target);
+			const apiConnector = await this.loadConfigurator(button);
 			(globalThis as {[key: string]: any}).ecommerceApi = apiConnector;
 			this.setConfiguratorVisibility(true);
 			return true;
@@ -325,7 +326,11 @@ class ConfiguratorManager implements IConfiguratorManager {
 	async loadConfigurator(
 		target?: HTMLElement | null,
 	): Promise<IECommerceApiConnector | undefined> {
-		target = target ?? document.getElementById(OPEN_CONFIGURATOR_BUTTON_ID);
+		target =
+			target ??
+			document.querySelector<HTMLElement>(
+				`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`,
+			);
 		const productId = target?.dataset.productId;
 		if (!productId) {
 			this.log("❌ Product id not found");
@@ -365,12 +370,12 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 	enableConfigurator(): void {
 		const openConfiguratorButtons = document.querySelectorAll(
-			`#${OPEN_CONFIGURATOR_BUTTON_ID}`,
+			`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`,
 		);
 
 		if (openConfiguratorButtons.length === 0) {
 			this.log(
-				`ConfiguratorManager: No elements with id ${OPEN_CONFIGURATOR_BUTTON_ID} found.`,
+				`ConfiguratorManager: No elements with class ${OPEN_CONFIGURATOR_BUTTON_CLASS} found.`,
 			);
 		} else {
 			openConfiguratorButtons.forEach((button) => {
@@ -409,7 +414,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		Array.from(cartItems).forEach((cartItem) => {
 			// Check if a button already exists inside the product element
 			const existingButton = cartItem.parentElement?.querySelector(
-				`#${OPEN_CONFIGURATOR_BUTTON_ID}`,
+				`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`,
 			);
 
 			if (existingButton) {
@@ -432,10 +437,9 @@ class ConfiguratorManager implements IConfiguratorManager {
 
 			button.textContent =
 				this.configuration.settings.cart_item_button_label;
-			button.setAttribute("id", OPEN_CONFIGURATOR_BUTTON_ID);
 			button.setAttribute(
 				"class",
-				this.configuration.settings.cart_item_button_classes,
+				`${OPEN_CONFIGURATOR_BUTTON_CLASS} ${this.configuration.settings.cart_item_button_classes}`,
 			);
 			button.setAttribute("data-model-state-id", modelStateId);
 			button.setAttribute("data-product-id", productId);

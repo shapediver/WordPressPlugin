@@ -20,7 +20,7 @@ define('SHAPEDIVER_PLUGIN_VERSION', '1.0.0');
 define('SHAPEDIVER_PRODUCT_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-product-button');
 define('SHAPEDIVER_CART_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button');
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button');
-define('SHAPEDIVER_BUTTON_ID', 'app-builder-open-configurator');
+define('SHAPEDIVER_BUTTON_CLASS', 'app-builder-open-configurator');
 define('SHAPEDIVER_APP_BUILDER_URL', 'https://appbuilder.shapediver.com/v1/main/latest/');
 define('SHAPEDIVER_PRODUCT_BUTTON_LABEL', 'Customize'); // Default label for the configurator button on the product page
 define('SHAPEDIVER_CART_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for cart items
@@ -172,7 +172,7 @@ class ShapeDiverConfiguratorPlugin {
         if ($product) {
             $product_id = $product->get_id();
             if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
+                echo '<button class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
             }
         }
     }
@@ -215,8 +215,7 @@ class ShapeDiverConfiguratorPlugin {
         if ($product) {
             $product_id = $product->get_id();
             if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . 
-                    '" class="' . esc_attr($atts['class']) . 
+                echo '<button class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . $atts['class']) . 
                     '" data-product-id="' . esc_attr($product_id) . '" disabled>' . 
                     esc_html($atts['label']) . 
                     '</button>';
@@ -412,7 +411,7 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = $item->get_meta('model_state_id');
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
+            echo '<button class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
                 '" data-model-state-id="' . esc_attr($model_state_id) . 
                 '" data-context=order' . 
                 ' data-product-id="' . esc_attr($product_id) . '">' . 
