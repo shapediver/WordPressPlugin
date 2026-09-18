@@ -31,6 +31,10 @@ const MODAL_ELEMENT_ID = "app-builder-modal-wrapper";
 const IFRAME_ELEMENT_ID = "app-builder-iframe";
 /** Class of the button used to open the configurator (display the modal). */
 const OPEN_CONFIGURATOR_BUTTON_CLASS = "app-builder-open-configurator";
+/** Label shown on the clicked button while the configurator is loading. */
+const OPEN_CONFIGURATOR_BUTTON_LOADING_LABEL = "Loading…";
+/** Label shown on the clicked button if loading fails. */
+const OPEN_CONFIGURATOR_BUTTON_ERROR_LABEL = "Error";
 /** Id of the button used for closing the configurator modal. */
 const CLOSE_CONFIGURATOR_BUTTON_SELECTOR = "#app-builder-modal-close-button";
 /** Selector for testing whether we are running inside the e-commerce system. */
@@ -136,6 +140,11 @@ class ConfiguratorManager implements IConfiguratorManager {
 	private configuratorLoader: IConfiguratorLoader;
 
 	/**
+	 * Connector for the currently loaded configurator iframe.
+	 */
+	private ecommerceApi?: IECommerceApiConnector;
+
+	/**
 	 * Model state ID according to the URL query string.
 	 */
 	private modelStateIdFromUrl: string | null = null;
@@ -193,8 +202,7 @@ class ConfiguratorManager implements IConfiguratorManager {
 		// load and enable the configurator on product pages
 		if (document.querySelector(`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`)) {
 			this.loadConfigurator().then((apiConnector) => {
-				(globalThis as {[key: string]: any}).ecommerceApi =
-					apiConnector;
+				this.setEcommerceApi(apiConnector);
 				this.enableConfigurator();
 				// If there is a "modelStateId" query string parameter, show the configurator right away.
 				if (this.modelStateIdFromUrl) {
@@ -222,6 +230,32 @@ class ConfiguratorManager implements IConfiguratorManager {
 		if (this.debug) console.log("ConfiguratorManager", ...message);
 	}
 
+	private setEcommerceApi(
+		apiConnector: IECommerceApiConnector | undefined,
+	): void {
+		this.ecommerceApi = apiConnector;
+		(globalThis as {[key: string]: any}).ecommerceApi = apiConnector;
+	}
+
+	private getOpenConfiguratorButtons(): NodeListOf<Element> {
+		return document.querySelectorAll(`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`);
+	}
+
+	private setOpenConfiguratorButtonsDisabled(disabled: boolean): void {
+		this.getOpenConfiguratorButtons().forEach((button) => {
+			if (button instanceof HTMLButtonElement) {
+				button.disabled = disabled;
+			}
+		});
+	}
+
+	private refreshIframeReference(): void {
+		const iframe = document.getElementById(IFRAME_ELEMENT_ID);
+		if (iframe instanceof HTMLIFrameElement) {
+			this.iframe = iframe;
+		}
+	}
+
 	handleCloseConfigurator(event: MouseEvent): boolean | undefined {
 		if (!event.target) return;
 		const target = event.target as HTMLElement;
@@ -237,12 +271,54 @@ class ConfiguratorManager implements IConfiguratorManager {
 		if (!event.target) return;
 		const target = event.target as HTMLElement;
 		const button = target.closest(`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`);
-		if (button instanceof HTMLElement) {
-			event.preventDefault();
+		if (!(button instanceof HTMLElement)) return;
+
+		event.preventDefault();
+
+		const originalLabel =
+			button.dataset.originalLabel ?? button.textContent ?? "";
+		if (!button.dataset.originalLabel) {
+			button.dataset.originalLabel = originalLabel;
+		}
+
+		this.setOpenConfiguratorButtonsDisabled(true);
+		button.textContent = OPEN_CONFIGURATOR_BUTTON_LOADING_LABEL;
+
+		const wasVisible = this.isConfiguratorVisible;
+		this.setConfiguratorVisibility(true);
+
+		try {
+			const previousConnector = this.ecommerceApi;
 			const apiConnector = await this.loadConfigurator(button);
-			(globalThis as {[key: string]: any}).ecommerceApi = apiConnector;
-			this.setConfiguratorVisibility(true);
+			if (!apiConnector) {
+				throw new Error("Failed to load configurator");
+			}
+
+			const modelStateId =
+				this.modelStateIdFromUrl ?? button.dataset.modelStateId;
+			if (apiConnector === previousConnector && modelStateId) {
+				const result = await apiConnector.importModelState({
+					modelStateId,
+				});
+				if (!result.success) {
+					throw new Error(result.message);
+				}
+			}
+
+			this.setEcommerceApi(apiConnector);
+			button.textContent = originalLabel;
+
 			return true;
+		} catch (error) {
+			this.log("❌ Failed to open configurator", error);
+			button.textContent = OPEN_CONFIGURATOR_BUTTON_ERROR_LABEL;
+			if (!wasVisible) {
+				this.setConfiguratorVisibility(false);
+			}
+
+			return true;
+		} finally {
+			this.setOpenConfiguratorButtonsDisabled(false);
 		}
 	}
 
@@ -276,8 +352,8 @@ class ConfiguratorManager implements IConfiguratorManager {
 							.developmentUrlBuilderOptions,
 					},
 				);
-				(globalThis as {[key: string]: any}).ecommerceApi =
-					apiConnector;
+				this.setEcommerceApi(apiConnector);
+				this.refreshIframeReference();
 				this.setConfiguratorVisibility(true);
 			}, 1000);
 		}
@@ -365,23 +441,20 @@ class ConfiguratorManager implements IConfiguratorManager {
 				.specificECommerceApiActionsFactory,
 		});
 
+		this.refreshIframeReference();
+
 		return Promise.resolve(apiConnector);
 	}
 
 	enableConfigurator(): void {
-		const openConfiguratorButtons = document.querySelectorAll(
-			`.${OPEN_CONFIGURATOR_BUTTON_CLASS}`,
-		);
+		const openConfiguratorButtons = this.getOpenConfiguratorButtons();
 
 		if (openConfiguratorButtons.length === 0) {
 			this.log(
 				`ConfiguratorManager: No elements with class ${OPEN_CONFIGURATOR_BUTTON_CLASS} found.`,
 			);
 		} else {
-			openConfiguratorButtons.forEach((button) => {
-				if (button instanceof HTMLButtonElement)
-					button.disabled = false;
-			});
+			this.setOpenConfiguratorButtonsDisabled(false);
 		}
 
 		this.log("🚀 Configurator enabled!");
