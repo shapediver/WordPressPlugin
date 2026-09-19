@@ -17,6 +17,12 @@ Use the plugin manager of WordPress to install the plugin. Although we plan to d
 Once the plugin has been installed, you can configure global settings by navigating to `Settings -> ShapeDiver`. 
 All of the settings are optional.  
 
+The **Add to cart behavior** setting controls what happens after a customer adds a configured product from the overlay:
+
+- **Ignore** (default): leave the configurator open
+- **Close the configurator**: close the overlay; the customer stays on the product page
+- **Close the configurator and redirect to cart**: close the overlay and go to the WooCommerce cart
+
 <img alt="Plugin Settings" src="resources/plugin_settings.png" width="640"/>
 
 ### Product Settings

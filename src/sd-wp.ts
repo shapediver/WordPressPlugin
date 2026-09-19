@@ -22,6 +22,7 @@ import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/shared/config/querypara
 import packagejson from "../package.json";
 import {IConfiguratorLoader} from "./modules/configuratormanager/types/loader";
 import {WordPressConfiguratorLoader} from "./modules/wordpressapi/loader";
+import {AddToCartBehaviorType} from "./modules/wordpressapi/types/api";
 
 console.log(`ShapeDiver WordPress Plugin v${packagejson.version}`);
 
@@ -114,6 +115,8 @@ interface IPluginSettings {
 	debug_flag: string;
 	cart_item_button_label: string;
 	cart_item_button_classes: string;
+	add_to_cart_behavior: AddToCartBehaviorType;
+	cart_url: string;
 }
 
 class ConfiguratorManager implements IConfiguratorManager {
@@ -184,10 +187,21 @@ class ConfiguratorManager implements IConfiguratorManager {
 			ajaxUrl: this.configuration?.ajaxurl,
 			defaultSettingsUrl:
 				this.configuration?.settings.default_settings_url,
+			addToCartBehavior:
+				this.configuration?.settings.add_to_cart_behavior ?? "ignore",
 			closeConfiguratorHandler: () => {
 				this.setConfiguratorVisibility(false);
 
 				return Promise.resolve(true);
+			},
+			redirectToCartHandler: async () => {
+				this.setConfiguratorVisibility(false);
+				const cartUrl = this.configuration?.settings.cart_url;
+				if (cartUrl) {
+					window.location.href = cartUrl;
+				}
+
+				return true;
 			},
 		});
 
