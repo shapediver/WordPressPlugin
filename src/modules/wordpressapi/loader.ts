@@ -136,8 +136,10 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 					productId: parseInt(productId),
 					modelStateId,
 					debug: this.debug,
+					addToCartBehavior: this.options.addToCartBehavior,
 					closeConfiguratorHandler:
 						this.options.closeConfiguratorHandler,
+					redirectToCartHandler: this.options.redirectToCartHandler,
 				})
 			: new DummyECommerceApiActions();
 		const actions = apiActionsFactory

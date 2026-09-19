@@ -293,6 +293,18 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 			throw new Error(result.message ?? "Unknown error");
 		}
 
+		if (
+			this.options.addToCartBehavior === "close" &&
+			this.options.closeConfiguratorHandler
+		) {
+			await this.options.closeConfiguratorHandler();
+		} else if (
+			this.options.addToCartBehavior === "redirect_to_cart" &&
+			this.options.redirectToCartHandler
+		) {
+			await this.options.redirectToCartHandler();
+		}
+
 		return {
 			id: result.cart_item_key,
 		};

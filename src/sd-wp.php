@@ -25,6 +25,7 @@ define('SHAPEDIVER_APP_BUILDER_URL', 'https://appbuilder.shapediver.com/v1/main/
 define('SHAPEDIVER_PRODUCT_BUTTON_LABEL', 'Customize'); // Default label for the configurator button on the product page
 define('SHAPEDIVER_CART_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for cart items
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for order items
+define('SHAPEDIVER_ADD_TO_CART_BEHAVIOR', 'ignore'); // Default behavior after adding an item to the cart
 
 class ShapeDiverConfiguratorPlugin {
     public function __construct() {
@@ -80,6 +81,10 @@ class ShapeDiverConfiguratorPlugin {
         register_setting('shapediver_plugin_settings', 'product_button_label');
         register_setting('shapediver_plugin_settings', 'cart_item_button_label');
         register_setting('shapediver_plugin_settings', 'order_item_button_label');
+        register_setting('shapediver_plugin_settings', 'add_to_cart_behavior', array(
+            'sanitize_callback' => array($this, 'sanitize_add_to_cart_behavior'),
+            'default' => SHAPEDIVER_ADD_TO_CART_BEHAVIOR,
+        ));
         register_setting('shapediver_plugin_settings', 'debug_flag', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox'),
         ));
@@ -88,6 +93,12 @@ class ShapeDiverConfiguratorPlugin {
     // Sanitize function for checkbox (return 1 if checked, 0 if not)
     function sanitize_checkbox($input) {
         return $input ? 1 : 0;
+    }
+
+    // Sanitize add-to-cart behavior (one of ignore, close, redirect_to_cart)
+    public function sanitize_add_to_cart_behavior($input) {
+        $allowed = array('ignore', 'close', 'redirect_to_cart');
+        return in_array($input, $allowed, true) ? $input : SHAPEDIVER_ADD_TO_CART_BEHAVIOR;
     }
 
     // Render settings page in WordPress admin
@@ -129,6 +140,17 @@ class ShapeDiverConfiguratorPlugin {
                         <th scope="row">Label of the configurator button shown for order items (defaults to "<?php echo esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL) ?>").</th>
                         <td>
                             <input type="text" name="order_item_button_label" value="<?php echo esc_attr(get_option('order_item_button_label', SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL)); ?>" />
+                        </td>
+                    </tr>
+                    <tr valign="top">
+                        <th scope="row">Add to cart behavior. Determines the behavior of the configurator after adding an item to the cart.</th>
+                        <td>
+                            <?php $add_to_cart_behavior = get_option('add_to_cart_behavior', SHAPEDIVER_ADD_TO_CART_BEHAVIOR); ?>
+                            <select name="add_to_cart_behavior">
+                                <option value="ignore" <?php selected($add_to_cart_behavior, 'ignore'); ?>>Ignore</option>
+                                <option value="close" <?php selected($add_to_cart_behavior, 'close'); ?>>Close the configurator</option>
+                                <option value="redirect_to_cart" <?php selected($add_to_cart_behavior, 'redirect_to_cart'); ?>>Close the configurator and redirect to cart</option>
+                            </select>
                         </td>
                     </tr>
                     <tr valign="top">
@@ -593,6 +615,8 @@ class ShapeDiverConfiguratorPlugin {
             'debug_flag' => get_option('debug_flag', false),
             'cart_item_button_label' => get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL),
             'cart_item_button_classes' => get_option('cart_item_button_classes', SHAPEDIVER_CART_ITEM_BUTTON_CLASSES),
+            'add_to_cart_behavior' => get_option('add_to_cart_behavior', SHAPEDIVER_ADD_TO_CART_BEHAVIOR),
+            'cart_url' => function_exists('wc_get_cart_url') ? wc_get_cart_url() : '',
         );
     }
 }
