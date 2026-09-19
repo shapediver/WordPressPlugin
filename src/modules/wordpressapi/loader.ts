@@ -3,6 +3,7 @@ import {
 	ECommerceApiFactory,
 } from "@AppBuilderShared/features/ecommerce/api/ecommerceapi";
 import {IECommerceApiConnector} from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
+import {QUERYPARAM_MODELSTATEID} from "@AppBuilderShared/shared/config/queryparams";
 import {buildAppBuilderUrl} from "@AppBuilderShared/shared/lib/urlbuilder";
 import {
 	IConfiguratorLoader,
@@ -14,10 +15,55 @@ import {IWordpressApi, IWordPressConfiguratorLoaderOptions} from "./types/api";
 /** Timeout for establishing the cross-window API connection. */
 const CROSSWINDOW_API_TIMEOUT = 20000;
 
+/**
+ * Compare two App Builder URLs, ignoring `modelStateId`.
+ * Origin, pathname, and all other query parameters must match
+ * (query parameter order is ignored).
+ */
+function appBuilderUrlsMatchIgnoringModelStateId(
+	left: string,
+	right: string,
+): boolean {
+	try {
+		const urlA = new URL(left);
+		const urlB = new URL(right);
+		if (urlA.origin !== urlB.origin || urlA.pathname !== urlB.pathname) {
+			return false;
+		}
+
+		return searchParamsEqualIgnoring(
+			urlA.searchParams,
+			urlB.searchParams,
+			QUERYPARAM_MODELSTATEID,
+		);
+	} catch {
+		return false;
+	}
+}
+
+function searchParamsEqualIgnoring(
+	left: URLSearchParams,
+	right: URLSearchParams,
+	ignoredKey: string,
+): boolean {
+	const serialize = (params: URLSearchParams): string => {
+		const copy = new URLSearchParams(params);
+		copy.delete(ignoredKey);
+
+		return [...copy.entries()]
+			.map(([key, value]) => `${key}=${value}`)
+			.sort()
+			.join("&");
+	};
+
+	return serialize(left) === serialize(right);
+}
+
 export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 	private wordpressApi?: IWordpressApi;
 	private options: IWordPressConfiguratorLoaderOptions;
 	private debug: boolean;
+	private lastConnector?: IECommerceApiConnector;
 
 	constructor(options: IWordPressConfiguratorLoaderOptions) {
 		this.options = options;
@@ -75,46 +121,85 @@ export class WordPressConfiguratorLoader implements IConfiguratorLoader {
 			},
 		);
 
-		// do nothing if the URL didn't change
-		if (url === iframe.src) return;
+		if (appBuilderUrlsMatchIgnoringModelStateId(url, iframe.src)) {
+			this.log(
+				"♻️ Reusing configurator iframe (URL matches except modelStateId)",
+			);
+
+			return this.lastConnector;
+		}
+
+		const loadedIframe = await this.navigateIframe(iframe, url);
+
+		const defaultActions = this.wordpressApi
+			? new WordPressECommerceApiActions(this.wordpressApi, {
+					productId: parseInt(productId),
+					modelStateId,
+					debug: this.debug,
+					closeConfiguratorHandler:
+						this.options.closeConfiguratorHandler,
+				})
+			: new DummyECommerceApiActions();
+		const actions = apiActionsFactory
+			? apiActionsFactory(defaultActions)
+			: defaultActions;
+
+		if (!loadedIframe.contentWindow) {
+			throw new Error("Configurator iframe has no content window.");
+		}
+
+		const api = await ECommerceApiFactory.getConnectorApi(
+			loadedIframe.contentWindow,
+			actions,
+			"plugin",
+			"app",
+			{timeout: CROSSWINDOW_API_TIMEOUT, debug: this.debug},
+		);
+
+		this.log("ecommerce API created:", api);
+		this.lastConnector = api;
+
+		return api;
+	}
+
+	/**
+	 * Load `url` in a fresh iframe. Changing `src` on an already-loaded iframe
+	 * often does not fire `load`, so the node is replaced instead.
+	 */
+	private navigateIframe(
+		iframe: HTMLIFrameElement,
+		url: string,
+	): Promise<HTMLIFrameElement> {
+		const next = iframe.cloneNode(false) as HTMLIFrameElement;
 
 		return new Promise((resolve, reject) => {
-			iframe.onload = async () => {
-				this.log("iframe loaded:", iframe);
-
-				// default ecommerce api actions
-				const defaultActions = this.wordpressApi
-					? new WordPressECommerceApiActions(this.wordpressApi, {
-							productId: parseInt(productId),
-							modelStateId,
-							debug: this.debug,
-							closeConfiguratorHandler:
-								this.options.closeConfiguratorHandler,
-						})
-					: new DummyECommerceApiActions();
-				// optionally override default ecommerce api actions
-				const actions = apiActionsFactory
-					? apiActionsFactory(defaultActions)
-					: defaultActions;
-				// create ecommerce api
-				const api = await ECommerceApiFactory.getConnectorApi(
-					iframe.contentWindow!,
-					actions,
-					"plugin",
-					"app",
-					{timeout: CROSSWINDOW_API_TIMEOUT, debug: this.debug},
-				);
-
-				this.log("ecommerce API created:", api);
-				resolve(api);
+			const cleanup = () => {
+				next.removeEventListener("load", onLoad);
+				next.removeEventListener("error", onError);
 			};
-			iframe.onerror = (message, source, lineno, colno, error) => {
-				const msg = `❌ Error loading configurator iframe: message = "${message}", source = "${source}", lineno = "${lineno}", colno = "${colno}", error = "${error}"`;
+
+			const onLoad = () => {
+				if (next.src === "about:blank") {
+					return;
+				}
+
+				cleanup();
+				this.log("iframe loaded:", next);
+				resolve(next);
+			};
+
+			const onError = () => {
+				cleanup();
+				const msg = `❌ Error loading configurator iframe: url = "${url}"`;
 				this.log(msg);
 				reject(new Error(msg));
 			};
-			iframe.src = url;
+
+			next.addEventListener("load", onLoad);
+			next.addEventListener("error", onError);
+			next.src = url;
 			this.log("🔗 Setting iframe src:", url);
+			iframe.replaceWith(next);
 		});
 	}
 }

@@ -20,7 +20,7 @@ define('SHAPEDIVER_PLUGIN_VERSION', '1.0.0');
 define('SHAPEDIVER_PRODUCT_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-product-button');
 define('SHAPEDIVER_CART_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button');
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button');
-define('SHAPEDIVER_BUTTON_ID', 'app-builder-open-configurator');
+define('SHAPEDIVER_BUTTON_CLASS', 'app-builder-open-configurator');
 define('SHAPEDIVER_APP_BUILDER_URL', 'https://appbuilder.shapediver.com/v1/main/latest/');
 define('SHAPEDIVER_PRODUCT_BUTTON_LABEL', 'Customize'); // Default label for the configurator button on the product page
 define('SHAPEDIVER_CART_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for cart items
@@ -39,7 +39,7 @@ class ShapeDiverConfiguratorPlugin {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // WooCommerce product page modifications
-        add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
+        add_action('woocommerce_after_add_to_cart_form', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
         add_action('woocommerce_process_product_meta', array($this, 'save_custom_product_fields'));
@@ -164,17 +164,58 @@ class ShapeDiverConfiguratorPlugin {
         $settings_url = get_post_meta($product_id, '_settings_url', true);
         return !empty($model_view_url) || !empty($embedding_ticket) || !empty($slug) || !empty($settings_url);
     }
-    
+
+    // Resolve the current product. On single product URLs WordPress copies the
+    // `product` query var (the slug string) into $GLOBALS['product'] before
+    // WooCommerce replaces it with a WC_Product. Never call methods on that string.
+    // During Store API hydration get_the_ID() is often not the product, so also
+    // resolve a slug or numeric ID from the global.
+    private function get_current_product() {
+        global $product;
+        if ($product instanceof WC_Product) {
+            return $product;
+        }
+        if (!function_exists('wc_get_product')) {
+            return null;
+        }
+
+        $resolved = $this->resolve_product_from_identifier($product);
+        if ($resolved instanceof WC_Product) {
+            return $resolved;
+        }
+
+        $resolved = wc_get_product(get_the_ID());
+        return $resolved instanceof WC_Product ? $resolved : null;
+    }
+
+    private function resolve_product_from_identifier($identifier) {
+        if (is_numeric($identifier)) {
+            $resolved = wc_get_product((int) $identifier);
+            return $resolved instanceof WC_Product ? $resolved : null;
+        }
+        if (!is_string($identifier) || $identifier === '') {
+            return null;
+        }
+        $posts = get_posts(array(
+            'name' => sanitize_title($identifier),
+            'post_type' => 'product',
+            'post_status' => array('publish', 'private'),
+            'numberposts' => 1,
+        ));
+        if (empty($posts)) {
+            return null;
+        }
+        $resolved = wc_get_product($posts[0]->ID);
+        return $resolved instanceof WC_Product ? $resolved : null;
+    }
 
     // Add "Customize" button to product page
     public function add_configurator_button() {
-        global $product;
-        if ($product) {
-            $product_id = $product->get_id();
-            if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
-            }
+        $product = $this->get_current_product();
+        if (!$product || !$this->is_product_configurable($product->get_id())) {
+            return;
         }
+        echo '<button type="button" class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product->get_id()) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
     }
 
     // Add modal for configurator iframe
@@ -201,8 +242,6 @@ class ShapeDiverConfiguratorPlugin {
 
     // Function for the "configurator_button" shortcode
     function configurator_button_shortcode($atts) {
-        global $product;
-    
         // Define default attributes for the shortcode
         $atts = shortcode_atts(
             array(
@@ -212,16 +251,15 @@ class ShapeDiverConfiguratorPlugin {
             $atts
         );
 
-        if ($product) {
-            $product_id = $product->get_id();
-            if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . 
-                    '" class="' . esc_attr($atts['class']) . 
-                    '" data-product-id="' . esc_attr($product_id) . '" disabled>' . 
-                    esc_html($atts['label']) . 
-                    '</button>';
-            }
+        $product = $this->get_current_product();
+        if (!$product || !$this->is_product_configurable($product->get_id())) {
+            return '';
         }
+
+        return '<button type="button" class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . $atts['class']) .
+            '" data-product-id="' . esc_attr($product->get_id()) . '" disabled>' .
+            esc_html($atts['label']) .
+            '</button>';
     }
     
     // Register AJAX handlers
@@ -412,7 +450,7 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = $item->get_meta('model_state_id');
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
+            echo '<button class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
                 '" data-model-state-id="' . esc_attr($model_state_id) . 
                 '" data-context=order' . 
                 ' data-product-id="' . esc_attr($product_id) . '">' . 
