@@ -120,7 +120,9 @@ The resulting zip file can be found in the project root directory.
 In case you need to implement custom handlers for the actions that the app running inside 
 the iframe may call, check out [src/sd-specific.example.ts](src/sd-specific.example.ts) on
 how to implement your custom handlers. You can find the implementation of the default 
-handlers [here](src/modules/wordpressapi/api.ts#L180). 
+handlers [here](src/modules/wordpressapi/api.ts#L237).
+
+A custom `addItemToCart` handler returns `{ id }` and may also return `successMessage`. A custom `updateSharingLink` handler returns one of `href`, `successMessage`, or `errorMessage`. When more than one of those sharing-link fields is set, App Builder uses `errorMessage`, then `successMessage`, then `href`. Both message fields may include the placeholder `{modelStateId}`, which App Builder substitutes. The default `updateSharingLink` handler updates the page URL and returns `{ href }`. `properties` on that call are left for a custom handler. 
 
 ## Updating parameter values 
 It is possible to update parameter values of the App Builder app running inside the iframe. 
@@ -218,7 +220,30 @@ await globalThis.ecommerceApi.triggerAction({
 });
 ```
 
+## Reading an output
 
+`getOutput` returns the latest content of an output by id, name, or display name. `namespace` is optional and defaults to the configurator session.
+
+```
+const reply = await globalThis.ecommerceApi.getOutput({ output: "Price" });
+```
+
+The reply has the shape `{ found, content?, message? }`. `content` is set when `found` is true.
+
+## Line item properties
+
+An App Builder add-to-cart action can include `properties`, a map of strings. The plugin stores those entries as WooCommerce line item data, next to the configuration id and description. They are shown in the cart and on the order. Underscores in a key are shown as spaces. If a property reuses `model_state_id` or `description`, the dedicated configuration id and description are the values that are stored.
+
+```JSON
+{
+  "type": "addToCart",
+  "props": {
+    "properties": {
+      "Engraving": "Ada"
+    }
+  }
+}
+```
 
 ## License
 

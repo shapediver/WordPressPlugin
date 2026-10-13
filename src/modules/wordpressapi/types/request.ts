@@ -38,9 +38,10 @@ export interface IWordpressAddToCartRequest extends WordPressAjaxRequestType {
 
 /**
  * Custom data that can be added to a cart item.
+ * Further keys are string line item properties from the e-commerce API.
+ * `model_state_id` and `description` are reserved for the dedicated fields.
  */
-export interface IWordpressAddToCartCustomData
-	extends WordPressAjaxRequestType {
+export interface IWordpressAddToCartCustomData {
 	/**
 	 * The id of the ShapeDiver model state that should be linked to the cart item
 	 */
@@ -50,10 +51,11 @@ export interface IWordpressAddToCartCustomData
 	 * The description of the cart (line) item to be added.
 	 */
 	description?: string;
+
+	[key: string]: string | undefined;
 }
 
-export interface IWordpressGetProductDataRequest
-	extends WordPressAjaxRequestType {
+export interface IWordpressGetProductDataRequest extends WordPressAjaxRequestType {
 	/**
 	 * Id of the product.
 	 */

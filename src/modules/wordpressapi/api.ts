@@ -17,6 +17,7 @@ import {
 	IWordPressECommerceApiActionsOptions,
 } from "./types/api";
 import {
+	IWordpressAddToCartCustomData,
 	IWordpressAddToCartRequest,
 	IWordpressGetProductDataRequest,
 	WordPressAjaxRequestType,
@@ -37,6 +38,35 @@ import {
 interface IWordPressAjaxResponse<T> {
 	success: boolean;
 	data?: T;
+}
+
+/**
+ * Cart item custom data for an add-to-cart call.
+ * String `properties` are copied through. `modelStateId` and `description`
+ * are applied afterwards so they win when a property reuses those keys.
+ * Non-string property values are omitted.
+ */
+export function wordpressAddToCartCustomData(
+	data: IAddItemToCartData,
+): IWordpressAddToCartCustomData {
+	const customData: IWordpressAddToCartCustomData = {};
+
+	if (data.properties) {
+		for (const [key, value] of Object.entries(data.properties)) {
+			if (typeof value === "string") {
+				customData[key] = value;
+			}
+		}
+	}
+
+	if (typeof data.modelStateId === "string") {
+		customData.model_state_id = data.modelStateId;
+	}
+	if (typeof data.description === "string") {
+		customData.description = data.description;
+	}
+
+	return customData;
 }
 
 export class WordpressApi implements IWordpressApi {
@@ -269,16 +299,11 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 			}
 		}
 
-		// map request
 		const request: IWordpressAddToCartRequest = {
 			product_id,
 			quantity: data.quantity,
 			custom_price: data.price,
-			custom_data: {
-				model_state_id: data.modelStateId,
-				// TODO Juan please implement to use the description when displaying the cart
-				description: data.description,
-			},
+			custom_data: wordpressAddToCartCustomData(data),
 		};
 
 		const result = await this.wordpressApi.addToCart(request);

@@ -317,17 +317,41 @@ class ShapeDiverConfiguratorPlugin {
         add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
         // This modifies the display key of the order item meta data
         add_filter('woocommerce_order_item_display_meta_key', array($this, 'modify_order_item_meta_key'), 10, 3);
+        // Hide the aggregate custom_data blob; individual keys are shown instead
+        add_filter('woocommerce_hidden_order_itemmeta', array($this, 'hide_custom_data_order_item_meta'));
         // This adds the custom data to the cart item in the cart overview page
         add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
-    } 
+    }
 
-    public function modify_order_item_meta_key($display_key, $meta_key, $item) {
-        if ($display_key === 'model_state_id') {
-            return "Configuration ID";
+    public function hide_custom_data_order_item_meta($hidden_meta) {
+        $hidden_meta[] = 'custom_data';
+        return $hidden_meta;
+    }
+
+    public function modify_order_item_meta_key($display_key, $meta, $item) {
+        $meta_key = $display_key;
+        if (is_object($meta) && isset($meta->key) && is_string($meta->key)) {
+            $meta_key = $meta->key;
+        } elseif (is_string($meta)) {
+            $meta_key = $meta;
         }
-        if ($display_key === 'description') {
-            return "Description";
+
+        if ($meta_key === 'model_state_id' || $display_key === 'model_state_id') {
+            return 'Configuration ID';
         }
+        if ($meta_key === 'description' || $display_key === 'description') {
+            return 'Description';
+        }
+
+        if (!is_string($meta_key) || !is_object($item) || !method_exists($item, 'get_meta')) {
+            return $display_key;
+        }
+
+        $custom_data = $item->get_meta('custom_data');
+        if (is_array($custom_data) && array_key_exists($meta_key, $custom_data) && is_string($custom_data[$meta_key])) {
+            return ucfirst(str_replace('_', ' ', $meta_key));
+        }
+
         return $display_key;
     }
  
@@ -499,22 +523,33 @@ class ShapeDiverConfiguratorPlugin {
 
     // Action: Add custom data to order items
     public function add_custom_data_to_order_item($item, $cart_item_key, $values, $order) {
-        if (isset($values['custom_data'])) {
-            $custom_data = $values['custom_data'];
-            
-            // Add model_state_id separately
-            if (isset($custom_data['model_state_id'])) {
-                $item->add_meta_data('model_state_id', sanitize_text_field($custom_data['model_state_id']));
-            }
-            
-            // Add description separately
-            if (isset($custom_data['description'])) {
-                $item->add_meta_data('description', sanitize_text_field($custom_data['description']));
-            }
-            
-            // Add all custom data as a single meta field - to be clarified why we need this
-            $item->add_meta_data('custom_data', $custom_data);
+        if (!isset($values['custom_data']) || !is_array($values['custom_data'])) {
+            return;
         }
+
+        $custom_data = $values['custom_data'];
+
+        if (isset($custom_data['model_state_id']) && is_string($custom_data['model_state_id'])) {
+            $item->add_meta_data('model_state_id', sanitize_text_field($custom_data['model_state_id']));
+        }
+
+        if (isset($custom_data['description']) && is_string($custom_data['description'])) {
+            $item->add_meta_data('description', sanitize_text_field($custom_data['description']));
+        }
+
+        foreach ($custom_data as $key => $value) {
+            if (!is_string($key) || !is_string($value)) {
+                continue;
+            }
+            if ($key === 'model_state_id' || $key === 'description' || $key === 'custom_data' || $key === '') {
+                continue;
+            }
+            $item->add_meta_data($key, sanitize_text_field($value));
+        }
+
+        // Kept so display formatting can tell which keys came from the configurator.
+        // Hidden from the order view by woocommerce_hidden_order_itemmeta.
+        $item->add_meta_data('custom_data', $custom_data);
     }
 
     // Add custom product fields to WooCommerce product data
