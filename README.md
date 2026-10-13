@@ -171,6 +171,55 @@ The type definitions of the arguments of `createModelState` and `importModelStat
   * [`createModelState`](https://github.com/shapediver/AppBuilderShared/blob/b9aecd70d300e3ff3b193fdb2f0e847c1ab9b176/features/model-state/config/createModelState.ts#L33)
   * [`importModelState`](https://github.com/shapediver/AppBuilderShared/blob/b9aecd70d300e3ff3b193fdb2f0e847c1ab9b176/features/model-state/config/importModelState.ts#L14)
 
+## Updating the camera position and further actions
+Various actions can be triggered in the App Builder app. Some examples related to camera actions can be found below. For a full list of actions that can be triggered, please see the App Builder action type definitions [here](https://github.com/shapediver/AppBuilderShared/blob/b300642ee2d1c8dc4b167d1164a6fc588a6bb826/features/appbuilder/config/appbuilderActions.ts#L27). 
+
+Assign camera settings from a saved camera state:
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+    type: "assign",
+    props: { camera: { name: "Top" } },
+  },
+});
+```
+
+Set the camera position: 
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+    type: "set",
+    props: { position: [1,2,3], target: [0,0,0]  },
+  },
+});
+```
+
+Reset the camera to its default position: 
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+	type: "reset",
+	props: {},
+  },
+});
+```
+
+Zoom to extents: 
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+	type: "zoomTo",
+	props: {},
+  },
+});
+```
+
+
+
 ## License
 
 This project is licensed under the GPL v2 license.
