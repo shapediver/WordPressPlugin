@@ -42,9 +42,10 @@ interface IWordPressAjaxResponse<T> {
 
 /**
  * Cart item custom data for an add-to-cart call.
- * String `properties` are copied through. `modelStateId` and `description`
- * are applied afterwards so they win when a property reuses those keys.
- * Non-string property values are omitted.
+ * String, number, and boolean `properties` are copied through.
+ * Numbers and booleans are stored as strings. `modelStateId` and
+ * `description` are applied afterwards so they win when a property
+ * reuses those keys. Other property values are omitted.
  */
 export function wordpressAddToCartCustomData(
 	data: IAddItemToCartData,
@@ -52,9 +53,14 @@ export function wordpressAddToCartCustomData(
 	const customData: IWordpressAddToCartCustomData = {};
 
 	if (data.properties) {
-		for (const [key, value] of Object.entries(data.properties)) {
-			if (typeof value === "string") {
-				customData[key] = value;
+		const properties = data.properties as Record<string, unknown>;
+		for (const [key, value] of Object.entries(properties)) {
+			if (
+				typeof value === "string" ||
+				typeof value === "number" ||
+				typeof value === "boolean"
+			) {
+				customData[key] = String(value);
 			}
 		}
 	}
