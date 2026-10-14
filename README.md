@@ -17,6 +17,12 @@ Use the plugin manager of WordPress to install the plugin. Although we plan to d
 Once the plugin has been installed, you can configure global settings by navigating to `Settings -> ShapeDiver`. 
 All of the settings are optional.  
 
+The **Add to cart behavior** setting controls what happens after a customer adds a configured product from the overlay:
+
+- **Ignore** (default): leave the configurator open
+- **Close the configurator**: close the overlay; the customer stays on the product page
+- **Close the configurator and redirect to cart**: close the overlay and go to the WooCommerce cart
+
 <img alt="Plugin Settings" src="resources/plugin_settings.png" width="640"/>
 
 ### Product Settings
@@ -65,40 +71,35 @@ Example: `[sd_configurator_button label="My button text" class="myclass other-cl
 1. Clone the repository and run `git submodule update --init`
 2. Install dependencies: `pnpm install`
 3. Build the plugin: `pnpm run build`
-4. Copy `docker-compose.template.yml` to `docker-compose.yml`
-5. Create and start the container: `pnpm run wp:start`
-6. Navigate to `http://localhost:8080` and wait until WordPress is running
-7. Uncomment the line that mounts the plugin in `docker-compose.yml`
-8. Restart the container: `pnpm run wp:restart`
+4. Start WordPress: `pnpm run wp:start`
+5. Open `http://localhost:8080/wp-admin` (user `admin`, password `admin`)
 
-In general, whenever you want to refresh the container using local code changes, 
-carry out the following steps: 
+`wp:start` creates the WordPress and MariaDB containers, installs WordPress and WooCommerce, and activates this plugin from `./dist`.
 
-1. Build the plugin: `pnpm run build`
-2. Restart the container: `pnpm run wp:restart`
+If you previously used the Bitnami-based stack, run `pnpm run wp:reset` once. The old volumes are incompatible.
 
-Hint: The default WordPress user name is `user`, the default password is `bitnami`. 
+After code changes, rebuild the plugin (`pnpm run build`) and refresh the browser. A container restart is optional.
 
 ### Development Commands
 
 The following scripts are available for development:
 
-- `pnpm run wp:start`: Create the container if it hasn't been created before
-- `pnpm run wp:stop`: Stop the container
-- `pnpm run wp:restart`: Same as `wp:stop` followed by `wp:start`
-- `pnpm run wp:reset`: CAUTION! Recreates the containers, your data stored in WordPress will be lost!
+- `pnpm run wp:start`: Start WordPress and run first-time setup if needed
+- `pnpm run wp:stop`: Stop the containers
+- `pnpm run wp:restart`: Recreate the WordPress and database containers (keeps volumes)
+- `pnpm run wp:reset`: CAUTION! Deletes WordPress data volumes and reinstalls from scratch
 - `pnpm run wp:status`: Show docker status
-- `pnpm run dev:status`: Check the status of the development environment
 - `pnpm run build`: Build and bundle the plugin for production
 - `pnpm run start`: Standalone development mode of the plugin (without WordPress)
 - `pnpm run optimize`: Optimized build for production
 
 ### Docker Environment
 
-The project uses Docker for local development. The `docker-compose.yml` file sets up:
+The project uses Docker for local development. `docker-compose.yml` sets up:
 
-- A MariaDB database
-- A WordPress instance with the plugin directory mounted
+- Official MariaDB (`mariadb:lts`)
+- Official WordPress (`wordpress:php8.3-apache`) with `./dist` mounted as the plugin
+- A one-shot WP-CLI setup service that installs WooCommerce and activates the plugin
 
 To access the WordPress site, visit `http://localhost:8080` after starting the development environment.
 
@@ -119,7 +120,9 @@ The resulting zip file can be found in the project root directory.
 In case you need to implement custom handlers for the actions that the app running inside 
 the iframe may call, check out [src/sd-specific.example.ts](src/sd-specific.example.ts) on
 how to implement your custom handlers. You can find the implementation of the default 
-handlers [here](src/modules/wordpressapi/api.ts#L180). 
+handlers [here](src/modules/wordpressapi/api.ts#L237).
+
+A custom `addItemToCart` handler returns `{ id }` and may also return `successMessage`. A custom `updateSharingLink` handler returns one of `href`, `successMessage`, or `errorMessage`. When more than one of those sharing-link fields is set, App Builder uses `errorMessage`, then `successMessage`, then `href`. Both message fields may include the placeholder `{modelStateId}`, which App Builder substitutes. The default `updateSharingLink` handler updates the page URL and returns `{ href }`. `properties` on that call are left for a custom handler. 
 
 ## Updating parameter values 
 It is possible to update parameter values of the App Builder app running inside the iframe. 
@@ -169,6 +172,78 @@ The type definitions of the arguments of `createModelState` and `importModelStat
 
   * [`createModelState`](https://github.com/shapediver/AppBuilderShared/blob/b9aecd70d300e3ff3b193fdb2f0e847c1ab9b176/features/model-state/config/createModelState.ts#L33)
   * [`importModelState`](https://github.com/shapediver/AppBuilderShared/blob/b9aecd70d300e3ff3b193fdb2f0e847c1ab9b176/features/model-state/config/importModelState.ts#L14)
+
+## Updating the camera position and further actions
+Various actions can be triggered in the App Builder app. Some examples related to camera actions can be found below. For a full list of actions that can be triggered, please see the App Builder action type definitions [here](https://github.com/shapediver/AppBuilderShared/blob/b300642ee2d1c8dc4b167d1164a6fc588a6bb826/features/appbuilder/config/appbuilderActions.ts#L27). 
+
+Assign camera settings from a saved camera state:
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+    type: "assign",
+    props: { camera: { name: "Top" } },
+  },
+});
+```
+
+Set the camera position: 
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+    type: "set",
+    props: { position: [1,2,3], target: [0,0,0]  },
+  },
+});
+```
+
+Reset the camera to its default position: 
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+	type: "reset",
+	props: {},
+  },
+});
+```
+
+Zoom to extents: 
+```
+await globalThis.ecommerceApi.triggerAction({
+  type: "camera",
+  props: {
+	type: "zoomTo",
+	props: {},
+  },
+});
+```
+
+## Reading an output
+
+`getOutput` returns the latest content of an output by id, name, or display name. `namespace` is optional and defaults to the configurator session.
+
+```
+const reply = await globalThis.ecommerceApi.getOutput({ output: "Price" });
+```
+
+The reply has the shape `{ found, content?, message? }`. `content` is set when `found` is true.
+
+## Line item properties
+
+An App Builder add-to-cart action can include `properties`, a map of strings. The plugin stores those entries as WooCommerce line item data, next to the configuration id and description. They are shown in the cart and on the order. Underscores in a key are shown as spaces. If a property reuses `model_state_id` or `description`, the dedicated configuration id and description are the values that are stored.
+
+```JSON
+{
+  "type": "addToCart",
+  "props": {
+    "properties": {
+      "Engraving": "Ada"
+    }
+  }
+}
+```
 
 ## License
 

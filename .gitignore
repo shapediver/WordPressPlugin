@@ -1,7 +1,7 @@
+.vscode/
 dist
 sd-wp.zip
 node_modules
-docker-compose.yml
 .npmrc
 .npmrc.*
 .prettierrc

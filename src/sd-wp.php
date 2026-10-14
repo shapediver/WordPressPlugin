@@ -3,7 +3,7 @@
  * Plugin Name: ShapeDiver 3D Configurators
  * Plugin URI: https://github.com/shapediver/WordPressPlugin
  * Description: A plugin to integrate ShapeDiver 3D configurators into WooCommerce.
- * Version: 1.2.0
+ * Version: 1.11.0
  * Author: ShapeDiver GmbH
  * Author URI: https://www.shapediver.com
  * License: GPLv2 or later
@@ -16,15 +16,16 @@
 if (!defined('ABSPATH')) exit;
 
 // Constants
-define('SHAPEDIVER_PLUGIN_VERSION', '1.0.0');
+define('SHAPEDIVER_PLUGIN_VERSION', '1.11.0');
 define('SHAPEDIVER_PRODUCT_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-product-button');
 define('SHAPEDIVER_CART_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button');
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button');
-define('SHAPEDIVER_BUTTON_ID', 'app-builder-open-configurator');
+define('SHAPEDIVER_BUTTON_CLASS', 'app-builder-open-configurator');
 define('SHAPEDIVER_APP_BUILDER_URL', 'https://appbuilder.shapediver.com/v1/main/latest/');
 define('SHAPEDIVER_PRODUCT_BUTTON_LABEL', 'Customize'); // Default label for the configurator button on the product page
 define('SHAPEDIVER_CART_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for cart items
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_LABEL', 'View 3D Model'); // Default label for the configurator button shown for order items
+define('SHAPEDIVER_ADD_TO_CART_BEHAVIOR', 'ignore'); // Default behavior after adding an item to the cart
 
 class ShapeDiverConfiguratorPlugin {
     public function __construct() {
@@ -39,7 +40,7 @@ class ShapeDiverConfiguratorPlugin {
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
 
         // WooCommerce product page modifications
-        add_action('woocommerce_after_add_to_cart_button', array($this, 'add_configurator_button'));
+        add_action('woocommerce_after_add_to_cart_form', array($this, 'add_configurator_button'));
         add_action('wp_footer', array($this, 'add_configurator_modal'));
         add_action('woocommerce_product_options_general_product_data', array($this, 'add_custom_product_fields'));
         add_action('woocommerce_process_product_meta', array($this, 'save_custom_product_fields'));
@@ -80,6 +81,10 @@ class ShapeDiverConfiguratorPlugin {
         register_setting('shapediver_plugin_settings', 'product_button_label');
         register_setting('shapediver_plugin_settings', 'cart_item_button_label');
         register_setting('shapediver_plugin_settings', 'order_item_button_label');
+        register_setting('shapediver_plugin_settings', 'add_to_cart_behavior', array(
+            'sanitize_callback' => array($this, 'sanitize_add_to_cart_behavior'),
+            'default' => SHAPEDIVER_ADD_TO_CART_BEHAVIOR,
+        ));
         register_setting('shapediver_plugin_settings', 'debug_flag', array(
             'sanitize_callback' => array($this, 'sanitize_checkbox'),
         ));
@@ -88,6 +93,12 @@ class ShapeDiverConfiguratorPlugin {
     // Sanitize function for checkbox (return 1 if checked, 0 if not)
     function sanitize_checkbox($input) {
         return $input ? 1 : 0;
+    }
+
+    // Sanitize add-to-cart behavior (one of ignore, close, redirect_to_cart)
+    public function sanitize_add_to_cart_behavior($input) {
+        $allowed = array('ignore', 'close', 'redirect_to_cart');
+        return in_array($input, $allowed, true) ? $input : SHAPEDIVER_ADD_TO_CART_BEHAVIOR;
     }
 
     // Render settings page in WordPress admin
@@ -132,6 +143,17 @@ class ShapeDiverConfiguratorPlugin {
                         </td>
                     </tr>
                     <tr valign="top">
+                        <th scope="row">Add to cart behavior. Determines the behavior of the configurator after adding an item to the cart.</th>
+                        <td>
+                            <?php $add_to_cart_behavior = get_option('add_to_cart_behavior', SHAPEDIVER_ADD_TO_CART_BEHAVIOR); ?>
+                            <select name="add_to_cart_behavior">
+                                <option value="ignore" <?php selected($add_to_cart_behavior, 'ignore'); ?>>Ignore</option>
+                                <option value="close" <?php selected($add_to_cart_behavior, 'close'); ?>>Close the configurator</option>
+                                <option value="redirect_to_cart" <?php selected($add_to_cart_behavior, 'redirect_to_cart'); ?>>Close the configurator and redirect to cart</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr valign="top">
                         <th scope="row">Debug flag.</th>
                         <td>
                             <input type="checkbox" name="debug_flag" value="1" <?php checked("1", get_option('debug_flag', false)); ?> />
@@ -164,17 +186,58 @@ class ShapeDiverConfiguratorPlugin {
         $settings_url = get_post_meta($product_id, '_settings_url', true);
         return !empty($model_view_url) || !empty($embedding_ticket) || !empty($slug) || !empty($settings_url);
     }
-    
+
+    // Resolve the current product. On single product URLs WordPress copies the
+    // `product` query var (the slug string) into $GLOBALS['product'] before
+    // WooCommerce replaces it with a WC_Product. Never call methods on that string.
+    // During Store API hydration get_the_ID() is often not the product, so also
+    // resolve a slug or numeric ID from the global.
+    private function get_current_product() {
+        global $product;
+        if ($product instanceof WC_Product) {
+            return $product;
+        }
+        if (!function_exists('wc_get_product')) {
+            return null;
+        }
+
+        $resolved = $this->resolve_product_from_identifier($product);
+        if ($resolved instanceof WC_Product) {
+            return $resolved;
+        }
+
+        $resolved = wc_get_product(get_the_ID());
+        return $resolved instanceof WC_Product ? $resolved : null;
+    }
+
+    private function resolve_product_from_identifier($identifier) {
+        if (is_numeric($identifier)) {
+            $resolved = wc_get_product((int) $identifier);
+            return $resolved instanceof WC_Product ? $resolved : null;
+        }
+        if (!is_string($identifier) || $identifier === '') {
+            return null;
+        }
+        $posts = get_posts(array(
+            'name' => sanitize_title($identifier),
+            'post_type' => 'product',
+            'post_status' => array('publish', 'private'),
+            'numberposts' => 1,
+        ));
+        if (empty($posts)) {
+            return null;
+        }
+        $resolved = wc_get_product($posts[0]->ID);
+        return $resolved instanceof WC_Product ? $resolved : null;
+    }
 
     // Add "Customize" button to product page
     public function add_configurator_button() {
-        global $product;
-        if ($product) {
-            $product_id = $product->get_id();
-            if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product_id) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
-            }
+        $product = $this->get_current_product();
+        if (!$product || !$this->is_product_configurable($product->get_id())) {
+            return;
         }
+        echo '<button type="button" class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_PRODUCT_BUTTON_CLASSES) . '" data-product-id="' . esc_attr($product->get_id()) . '" disabled>' . esc_html(get_option('product_button_label', SHAPEDIVER_PRODUCT_BUTTON_LABEL)) . '</button>';
     }
 
     // Add modal for configurator iframe
@@ -201,8 +264,6 @@ class ShapeDiverConfiguratorPlugin {
 
     // Function for the "configurator_button" shortcode
     function configurator_button_shortcode($atts) {
-        global $product;
-    
         // Define default attributes for the shortcode
         $atts = shortcode_atts(
             array(
@@ -212,16 +273,15 @@ class ShapeDiverConfiguratorPlugin {
             $atts
         );
 
-        if ($product) {
-            $product_id = $product->get_id();
-            if ($this->is_product_configurable($product_id)) {
-                echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . 
-                    '" class="' . esc_attr($atts['class']) . 
-                    '" data-product-id="' . esc_attr($product_id) . '" disabled>' . 
-                    esc_html($atts['label']) . 
-                    '</button>';
-            }
+        $product = $this->get_current_product();
+        if (!$product || !$this->is_product_configurable($product->get_id())) {
+            return '';
         }
+
+        return '<button type="button" class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . $atts['class']) .
+            '" data-product-id="' . esc_attr($product->get_id()) . '" disabled>' .
+            esc_html($atts['label']) .
+            '</button>';
     }
     
     // Register AJAX handlers
@@ -257,17 +317,41 @@ class ShapeDiverConfiguratorPlugin {
         add_action('woocommerce_order_item_meta_end', array($this, 'add_button_after_order_item'), 10, 3);
         // This modifies the display key of the order item meta data
         add_filter('woocommerce_order_item_display_meta_key', array($this, 'modify_order_item_meta_key'), 10, 3);
+        // Hide the aggregate custom_data blob; individual keys are shown instead
+        add_filter('woocommerce_hidden_order_itemmeta', array($this, 'hide_custom_data_order_item_meta'));
         // This adds the custom data to the cart item in the cart overview page
         add_filter('woocommerce_get_item_data', array($this, 'display_custom_data_in_cart'), 10, 2);
-    } 
+    }
 
-    public function modify_order_item_meta_key($display_key, $meta_key, $item) {
-        if ($display_key === 'model_state_id') {
-            return "Configuration ID";
+    public function hide_custom_data_order_item_meta($hidden_meta) {
+        $hidden_meta[] = 'custom_data';
+        return $hidden_meta;
+    }
+
+    public function modify_order_item_meta_key($display_key, $meta, $item) {
+        $meta_key = $display_key;
+        if (is_object($meta) && isset($meta->key) && is_string($meta->key)) {
+            $meta_key = $meta->key;
+        } elseif (is_string($meta)) {
+            $meta_key = $meta;
         }
-        if ($display_key === 'description') {
-            return "Description";
+
+        if ($meta_key === 'model_state_id' || $display_key === 'model_state_id') {
+            return 'Configuration ID';
         }
+        if ($meta_key === 'description' || $display_key === 'description') {
+            return 'Description';
+        }
+
+        if (!is_string($meta_key) || !is_object($item) || !method_exists($item, 'get_meta')) {
+            return $display_key;
+        }
+
+        $custom_data = $item->get_meta('custom_data');
+        if (is_array($custom_data) && array_key_exists($meta_key, $custom_data) && is_string($custom_data[$meta_key])) {
+            return ucfirst(str_replace('_', ' ', $meta_key));
+        }
+
         return $display_key;
     }
  
@@ -412,7 +496,7 @@ class ShapeDiverConfiguratorPlugin {
         $model_state_id = $item->get_meta('model_state_id');
         
         if (!empty($model_state_id) && $this->is_product_configurable($product_id)) {
-            echo '<button id="' . esc_attr(SHAPEDIVER_BUTTON_ID) . '" class="' . esc_attr(SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
+            echo '<button class="' . esc_attr(SHAPEDIVER_BUTTON_CLASS . ' ' . SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES) . 
                 '" data-model-state-id="' . esc_attr($model_state_id) . 
                 '" data-context=order' . 
                 ' data-product-id="' . esc_attr($product_id) . '">' . 
@@ -439,22 +523,33 @@ class ShapeDiverConfiguratorPlugin {
 
     // Action: Add custom data to order items
     public function add_custom_data_to_order_item($item, $cart_item_key, $values, $order) {
-        if (isset($values['custom_data'])) {
-            $custom_data = $values['custom_data'];
-            
-            // Add model_state_id separately
-            if (isset($custom_data['model_state_id'])) {
-                $item->add_meta_data('model_state_id', sanitize_text_field($custom_data['model_state_id']));
-            }
-            
-            // Add description separately
-            if (isset($custom_data['description'])) {
-                $item->add_meta_data('description', sanitize_text_field($custom_data['description']));
-            }
-            
-            // Add all custom data as a single meta field - to be clarified why we need this
-            $item->add_meta_data('custom_data', $custom_data);
+        if (!isset($values['custom_data']) || !is_array($values['custom_data'])) {
+            return;
         }
+
+        $custom_data = $values['custom_data'];
+
+        if (isset($custom_data['model_state_id']) && is_string($custom_data['model_state_id'])) {
+            $item->add_meta_data('model_state_id', sanitize_text_field($custom_data['model_state_id']));
+        }
+
+        if (isset($custom_data['description']) && is_string($custom_data['description'])) {
+            $item->add_meta_data('description', sanitize_text_field($custom_data['description']));
+        }
+
+        foreach ($custom_data as $key => $value) {
+            if (!is_string($key) || !is_string($value)) {
+                continue;
+            }
+            if ($key === 'model_state_id' || $key === 'description' || $key === 'custom_data' || $key === '') {
+                continue;
+            }
+            $item->add_meta_data($key, sanitize_text_field($value));
+        }
+
+        // Kept so display formatting can tell which keys came from the configurator.
+        // Hidden from the order view by woocommerce_hidden_order_itemmeta.
+        $item->add_meta_data('custom_data', $custom_data);
     }
 
     // Add custom product fields to WooCommerce product data
@@ -573,6 +668,8 @@ class ShapeDiverConfiguratorPlugin {
             'debug_flag' => get_option('debug_flag', false),
             'cart_item_button_label' => get_option('cart_item_button_label', SHAPEDIVER_CART_ITEM_BUTTON_LABEL),
             'cart_item_button_classes' => get_option('cart_item_button_classes', SHAPEDIVER_CART_ITEM_BUTTON_CLASSES),
+            'add_to_cart_behavior' => get_option('add_to_cart_behavior', SHAPEDIVER_ADD_TO_CART_BEHAVIOR),
+            'cart_url' => function_exists('wc_get_cart_url') ? wc_get_cart_url() : '',
         );
     }
 }

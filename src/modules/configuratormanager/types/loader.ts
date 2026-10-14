@@ -1,8 +1,8 @@
-import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/shared/lib/urlbuilder";
 import {
 	IECommerceApiActions,
 	IECommerceApiConnector,
 } from "@AppBuilderShared/features/ecommerce/config/ecommerceapi";
+import {IAppBuilderUrlBuilderData} from "@AppBuilderShared/shared/lib/urlbuilder";
 
 /**
  * Options for loading a configurator.
@@ -54,8 +54,10 @@ export interface IConfiguratorLoaderOptions {
 export interface IConfiguratorLoader {
 	/**
 	 * Load the configurator defined by the provided options into the given iframe.
-	 * In case the provided options do not result in a change of the configurator,
-	 * the iframe will not be reloaded.
+	 * If origin, path, and query parameters other than `modelStateId` are
+	 * unchanged, the iframe is not reloaded and the existing connector is
+	 * returned. Call `importModelState` in that case to apply a different
+	 * (or the same) model state.
 	 *
 	 * @param iframe
 	 * @param options

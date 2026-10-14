@@ -17,6 +17,7 @@ import {
 	IWordPressECommerceApiActionsOptions,
 } from "./types/api";
 import {
+	IWordpressAddToCartCustomData,
 	IWordpressAddToCartRequest,
 	IWordpressGetProductDataRequest,
 	WordPressAjaxRequestType,
@@ -37,6 +38,41 @@ import {
 interface IWordPressAjaxResponse<T> {
 	success: boolean;
 	data?: T;
+}
+
+/**
+ * Cart item custom data for an add-to-cart call.
+ * String, number, and boolean `properties` are copied through.
+ * Numbers and booleans are stored as strings. `modelStateId` and
+ * `description` are applied afterwards so they win when a property
+ * reuses those keys. Other property values are omitted.
+ */
+export function wordpressAddToCartCustomData(
+	data: IAddItemToCartData,
+): IWordpressAddToCartCustomData {
+	const customData: IWordpressAddToCartCustomData = {};
+
+	if (data.properties) {
+		const properties = data.properties as Record<string, unknown>;
+		for (const [key, value] of Object.entries(properties)) {
+			if (
+				typeof value === "string" ||
+				typeof value === "number" ||
+				typeof value === "boolean"
+			) {
+				customData[key] = String(value);
+			}
+		}
+	}
+
+	if (typeof data.modelStateId === "string") {
+		customData.model_state_id = data.modelStateId;
+	}
+	if (typeof data.description === "string") {
+		customData.description = data.description;
+	}
+
+	return customData;
 }
 
 export class WordpressApi implements IWordpressApi {
@@ -154,23 +190,50 @@ export class WordpressApi implements IWordpressApi {
 			IWordpressAddToCartResponse
 		>("POST", "add_to_cart", request);
 
-		// Trigger WooCommerce cart refresh
-		// see https://developer.woocommerce.com/docs/block-development/getting-started/faq/#how-to-force-refresh-the-cart-from-the-server
-		try {
-			if ((globalThis as any).wp?.data?.dispatch) {
-				(globalThis as any).wp.data
-					.dispatch("wc/store/cart")
-					.invalidateResolutionForStore("cart");
-			} else {
-				(globalThis as any)
-					.jQuery(document.body)
-					.trigger("wc_fragment_refresh");
-			}
-		} catch (e) {
-			console.log("Could not trigger WooCommerce cart refresh", e);
-		}
+		this.refreshWooCommerceCart();
 
 		return IWordpressAddToCartResponseSchema.parse(data);
+	}
+
+	/**
+	 * Ask WooCommerce to re-render the cart icon, mini-cart, and cart blocks.
+	 * Mini-Cart (Interactivity API) listens for `wc-blocks_added_to_cart`;
+	 * classic themes listen for `wc_fragment_refresh`. Both must run even when
+	 * `wp.data` is present, because that store does not update the mini-cart.
+	 *
+	 * @see https://developer.woocommerce.com/docs/block-development/extensible-blocks/cart-and-checkout-blocks/dom-events
+	 */
+	private refreshWooCommerceCart(): void {
+		try {
+			document.body.dispatchEvent(
+				new CustomEvent("wc-blocks_added_to_cart", {
+					bubbles: true,
+					cancelable: true,
+					detail: {preserveCartData: false},
+				}),
+			);
+		} catch (e) {
+			this.log("Could not dispatch WooCommerce Blocks cart event", e);
+		}
+
+		try {
+			const jQuery = (globalThis as any).jQuery;
+			if (typeof jQuery === "function") {
+				jQuery(document.body).trigger("wc_fragment_refresh");
+				jQuery(document.body).trigger("added_to_cart");
+			}
+		} catch (e) {
+			this.log("Could not trigger WooCommerce cart fragment refresh", e);
+		}
+
+		try {
+			const dispatch = (globalThis as any).wp?.data?.dispatch;
+			if (typeof dispatch === "function") {
+				dispatch("wc/store/cart")?.invalidateResolutionForStore?.();
+			}
+		} catch (e) {
+			this.log("Could not invalidate WooCommerce cart data store", e);
+		}
 	}
 }
 
@@ -242,16 +305,11 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 			}
 		}
 
-		// map request
 		const request: IWordpressAddToCartRequest = {
 			product_id,
 			quantity: data.quantity,
 			custom_price: data.price,
-			custom_data: {
-				model_state_id: data.modelStateId,
-				// TODO Juan please implement to use the description when displaying the cart
-				description: data.description,
-			},
+			custom_data: wordpressAddToCartCustomData(data),
 		};
 
 		const result = await this.wordpressApi.addToCart(request);
@@ -264,6 +322,18 @@ export class WordPressECommerceApiActions implements IECommerceApiActions {
 			result.cart_item_key.length === 0
 		) {
 			throw new Error(result.message ?? "Unknown error");
+		}
+
+		if (
+			this.options.addToCartBehavior === "close" &&
+			this.options.closeConfiguratorHandler
+		) {
+			await this.options.closeConfiguratorHandler();
+		} else if (
+			this.options.addToCartBehavior === "redirect_to_cart" &&
+			this.options.redirectToCartHandler
+		) {
+			await this.options.redirectToCartHandler();
 		}
 
 		return {

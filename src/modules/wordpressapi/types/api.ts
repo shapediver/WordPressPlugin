@@ -36,6 +36,9 @@ export interface IWordpressApi {
 	): Promise<IWordpressAddToCartResponse>;
 }
 
+/** Behavior after adding an item to the cart. */
+export type AddToCartBehaviorType = "ignore" | "close" | "redirect_to_cart";
+
 /**
  * Options for WordPressECommerceApiActions.
  */
@@ -54,10 +57,18 @@ export interface IWordPressECommerceApiActionsOptions {
 	/** Debug flag. */
 	debug?: boolean;
 
+	/** Behavior after adding an item to the cart. */
+	addToCartBehavior?: AddToCartBehaviorType;
+
 	/**
 	 * Handler for closing the configurator modal / window.
 	 */
 	closeConfiguratorHandler: () => Promise<boolean>;
+
+	/**
+	 * Handler for closing the configurator modal / window and redirecting to the cart.
+	 */
+	redirectToCartHandler: () => Promise<boolean>;
 }
 
 /**
@@ -82,7 +93,9 @@ export type IWordPressConfiguratorLoaderOptions =
 	Partial<IWordpressApiOptions> &
 		Pick<
 			IWordPressECommerceApiActionsOptions,
-			"closeConfiguratorHandler"
+			| "closeConfiguratorHandler"
+			| "addToCartBehavior"
+			| "redirectToCartHandler"
 		> & {
 			/**
 			 * Default URL of the JSON file defining the App Builder settings of the configurator.
