@@ -3,7 +3,7 @@
  * Plugin Name: ShapeDiver 3D Configurators
  * Plugin URI: https://github.com/shapediver/WordPressPlugin
  * Description: A plugin to integrate ShapeDiver 3D configurators into WooCommerce.
- * Version: 1.2.0
+ * Version: 1.11.0
  * Author: ShapeDiver GmbH
  * Author URI: https://www.shapediver.com
  * License: GPLv2 or later
@@ -16,7 +16,7 @@
 if (!defined('ABSPATH')) exit;
 
 // Constants
-define('SHAPEDIVER_PLUGIN_VERSION', '1.0.0');
+define('SHAPEDIVER_PLUGIN_VERSION', '1.11.0');
 define('SHAPEDIVER_PRODUCT_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-product-button');
 define('SHAPEDIVER_CART_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-cart-item-button');
 define('SHAPEDIVER_ORDER_ITEM_BUTTON_CLASSES', 'single_add_to_cart_button button alt wp-element-button shapediver-order-item-button');
