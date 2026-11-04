@@ -1,0 +1,232 @@
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: Version increment. Patch releases publish the plugin zip and skip the Newsfeed entry.
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes_file:
+        description: Required for minor and major releases. Commit .github/release-notes/wordpress-plugin-X.Y.Z.md first. The H1 is the GitHub Release title.
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wordpress-plugin-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - name: Require development branch
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" != "refs/heads/development" ]]; then
+            echo "Run this workflow from the development branch." >&2
+            exit 1
+          fi
+
+      - name: Create GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.BOT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Checkout development
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          ref: development
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Configure git user
+        shell: bash
+        run: |
+          APP_SLUG="${{ steps.app-token.outputs.app-slug }}"
+          USER_ID="$(gh api "/users/${APP_SLUG}[bot]" --jq .id)"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+
+      - name: Bump version
+        id: version
+        shell: bash
+        env:
+          VERSION_BUMP: ${{ inputs.version_bump }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          SUBJECT="$(git log -1 --format=%s)"
+          if [[ "${SUBJECT}" =~ ^chore\(release\):[[:space:]]release[[:space:]]([0-9]+\.[0-9]+\.[0-9]+)[[:space:]]\(run[[:space:]]${RUN_ID}\)$ ]]; then
+            VERSION="${BASH_REMATCH[1]}"
+            FILE_VERSION="$(node scripts/release/bump-version.mjs current)"
+            if [[ "${FILE_VERSION}" != "${VERSION}" ]]; then
+              echo "Release commit is ${VERSION}, but the version files are ${FILE_VERSION}." >&2
+              exit 1
+            fi
+            echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+            echo "resume=true" >> "$GITHUB_OUTPUT"
+            echo "Resuming release ${VERSION} from this workflow run."
+          else
+            node scripts/release/bump-version.mjs "${VERSION_BUMP}"
+            echo "resume=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare release notes
+        id: release-notes
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TYPE: ${{ inputs.version_bump }}
+          RELEASE_NOTES_FILE: ${{ inputs.release_notes_file }}
+        run: node scripts/release/read-release-notes.mjs
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build plugin
+        run: pnpm run build
+
+      - name: Commit version bump
+        if: steps.version.outputs.resume != 'true'
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          git add package.json src/sd-wp.php
+          if git diff --cached --quiet; then
+            echo "Version files did not change." >&2
+            exit 1
+          fi
+          git commit -m "chore(release): release ${VERSION} (run ${RUN_ID})"
+
+      - name: Push release commit and tag
+        shell: bash
+        env:
+          PUSH_TOKEN: ${{ steps.app-token.outputs.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          REMOTE="https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          TAG="v${VERSION}"
+          git push "${REMOTE}" HEAD:development
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            TAG_COMMIT="$(git rev-parse "${TAG}^{}")"
+            HEAD_COMMIT="$(git rev-parse HEAD)"
+            if [[ "${TAG_COMMIT}" != "${HEAD_COMMIT}" ]]; then
+              echo "Tag ${TAG} already points at ${TAG_COMMIT}, not ${HEAD_COMMIT}." >&2
+              exit 1
+            fi
+            echo "Tag ${TAG} already exists at this commit."
+          else
+            git tag -a "${TAG}" -m "Release ${VERSION}"
+          fi
+          git push "${REMOTE}" "${TAG}"
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ${{ steps.release-notes.outputs.title }}
+          body_path: ${{ steps.release-notes.outputs.body_path }}
+          generate_release_notes: true
+          files: sd-wp.zip
+          token: ${{ steps.app-token.outputs.token }}
+
+  newsfeed:
+    needs: release
+    if: needs.release.result == 'success' && inputs.version_bump != 'patch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Create cross-repo contents GitHub App token
+        id: cross-repo-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ secrets.BOT_APP_CLIENT_ID }}
+          private-key: ${{ secrets.BOT_APP_PRIVATE_KEY }}
+          owner: shapediver
+          repositories: |
+            Newsfeed
+          permission-contents: write
+
+      - name: Create newsfeed entry
+        shell: bash
+        env:
+          GH_TOKEN: ${{ steps.cross-repo-token.outputs.token }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%Y-%m-%d)"
+          GITHUB_URL="https://github.com/${GITHUB_REPOSITORY}/releases/tag/v${VERSION}"
+          FILENAME="wordpress-plugin-release-${VERSION}.md"
+          TARGET_PATH="src/content/news/${FILENAME}"
+
+          cat > "/tmp/${FILENAME}" << EOF
+          ---
+          title: "WordPress Plugin Release ${VERSION}"
+          description: "WordPress Plugin version ${VERSION} has been released."
+          pubDate: ${DATE}
+          category: release-notes
+          tags:
+            - WordPress
+          author: "Alexander Schiftner"
+          externalUrl: "${GITHUB_URL}"
+          ---
+
+          WordPress Plugin version ${VERSION} has been released. Read the full [WordPress Plugin ${VERSION} release notes](${GITHUB_URL}).
+          EOF
+
+          CONTENT="$(base64 -w0 "/tmp/${FILENAME}")"
+          EXISTING_SHA="$(gh api "repos/shapediver/Newsfeed/contents/${TARGET_PATH}?ref=development" --jq '.sha' 2>/dev/null || true)"
+
+          if [[ -n "${EXISTING_SHA}" ]]; then
+            gh api "repos/shapediver/Newsfeed/contents/${TARGET_PATH}" \
+              --method PUT \
+              -f message="Update wordpress plugin release ${VERSION} newsfeed entry" \
+              -f content="${CONTENT}" \
+              -f branch="development" \
+              -f sha="${EXISTING_SHA}"
+            echo "Updated newsfeed entry: ${FILENAME}"
+          else
+            gh api "repos/shapediver/Newsfeed/contents/${TARGET_PATH}" \
+              --method PUT \
+              -f message="Add wordpress plugin release ${VERSION} newsfeed entry" \
+              -f content="${CONTENT}" \
+              -f branch="development"
+            echo "Created newsfeed entry: ${FILENAME}"
+          fi
